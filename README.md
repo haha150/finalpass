@@ -1,25 +1,23 @@
 # password-manager
 
-## Install node and npm
+## Install Go
 
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+sudo apt -y install build-essential libglu1-mesa-dev libpulse-dev libglib2.0-dev libqt*5-dev qt*5-dev
 
-source ~/.bashrc
+wget https://go.dev/dl/go1.20.6.linux-amd64.tar.gz
 
-nvm ls-remote
+tar -xvf go1.20.6.linux-amd64.tar.gz
 
-nvm install node
-
-nvm use node
-
-npm install -g yarn
+sudo mv go /usr/local/
 
 ## Build & run
 
-yarn install
+go mod init password-manager
 
-yarn run start
+go get github.com/therecipe/qt/core
 
-yarn run build
+go get github.com/therecipe/qt/widgets
 
-yarn run package
+go get golang.org/x/crypto
+
+go run .
