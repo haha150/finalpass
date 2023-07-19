@@ -64,11 +64,28 @@ func createSideMenu() *widgets.QWidget {
 	widget.SetFixedWidth(100)
 	widget.SetStyleSheet("background-color: #F0F0F0;")
 
-	l1 := widgets.NewQLabel(nil, 0)
-	l1.SetText("Home")
+	tree := widgets.NewQTreeWidget(nil)
+	tree.SetHeaderHidden(true)
+	tree.SetStyleSheet("background-color: #F0F0F0;")
+	tree.SetColumnCount(1)
+	tree.SetColumnWidth(0, 100)
+	tree.SetIndentation(0)
+	tree.SetFocusPolicy(1)
+	tree.SetSelectionMode(0)
+	tree.SetAnimated(true)
+	tree.SetUniformRowHeights(true)
+	tree.SetRootIsDecorated(false)
+	tree.SetItemsExpandable(false)
+	tree.SetHorizontalScrollBarPolicy(1)
+	tree.SetVerticalScrollBarPolicy(1)
+	tree.SetAutoScroll(true)
+	tree.SetAutoScrollMargin(10)
 
-	layout := widgets.NewQVBoxLayout2(widget)
-	layout.AddWidget(l1, 0, 0)
+	item1 := widgets.NewQTreeWidgetItem2([]string{"Database"}, 0)
+	tree.AddTopLevelItem(item1)
+
+	layout := widgets.NewQHBoxLayout2(widget)
+	layout.AddWidget(tree, 0, 0)
 
 	return widget
 }
