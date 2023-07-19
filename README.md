@@ -16,6 +16,8 @@ npm install -g yarn
 
 ## Build & run
 
+yarn install
+
 yarn run start
 
 yarn run build
