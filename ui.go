@@ -50,21 +50,51 @@ func createToolBar() *widgets.QToolBar {
 	save := widgets.NewQAction(nil)
 	save.SetIcon(gui.NewQIcon5("icons/save.svg"))
 	save.SetToolTip("Save")
+	save.ConnectTriggered(func(bool) {
+		log.Println("Save")
+	})
 
 	category := widgets.NewQAction(nil)
 	category.SetIcon(gui.NewQIcon5("icons/category.svg"))
-	category.SetToolTip("Category")
+	category.SetToolTip("Add new category")
+	category.ConnectTriggered(func(bool) {
+		log.Println("New category")
+		log.Println(tree.CurrentItem().Text(0))
+		log.Println(tree.CurrentItem().Parent().Text(0))
+		if tree.CurrentItem().Parent().Text(0) == "" {
+			cat, err := controller.CreateCategory(tree.CurrentItem().Text(0), "abcd")
+			if err != nil {
+				log.Println(err)
+			} else {
+				tree.CurrentItem().AddChild(widgets.NewQTreeWidgetItem2([]string{cat.Name}, 0))
+			}
+		} else {
+			cat, err := controller.CreateCategory(tree.CurrentItem().Parent().Text(0), "abcd2")
+			if err != nil {
+				log.Println(err)
+			} else {
+				tree.CurrentItem().Parent().AddChild(widgets.NewQTreeWidgetItem2([]string{cat.Name}, 0))
+			}
+		}
+	})
 
 	add := widgets.NewQAction(nil)
 	add.SetIcon(gui.NewQIcon5("icons/add.svg"))
-	add.SetToolTip("Add")
+	add.SetToolTip("Add new entry")
+	add.ConnectTriggered(func(bool) {
+		log.Println("New entry")
+		// controller.CreateSecret("test")
+	})
 
 	remove := widgets.NewQAction(nil)
 	remove.SetIcon(gui.NewQIcon5("icons/remove.svg"))
 	remove.SetToolTip("Remove")
+	remove.ConnectTriggered(func(bool) {
+		log.Println("Remove")
+	})
 
-	tool.InsertAction(nil, category)
 	tool.InsertAction(nil, save)
+	tool.InsertAction(nil, category)
 	tool.InsertAction(nil, add)
 	tool.InsertAction(nil, remove)
 
@@ -95,6 +125,7 @@ func createSideMenu() *widgets.QWidget {
 	for _, database := range databases {
 		parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
 		tree.AddTopLevelItem(parent)
+		log.Println(database.Categories)
 		for _, category := range database.Categories {
 			child := widgets.NewQTreeWidgetItem2([]string{category.Name}, 0)
 			parent.AddChild(child)
@@ -124,9 +155,10 @@ func createMain() *widgets.QWidget {
 }
 
 func main() {
-	log.Println("Start application")
+	log.Println("Init application")
 	controller.Init()
 	controller.CreateDatabaseAndCategoryIfNotExist()
+	log.Println("Start application")
 	app := widgets.NewQApplication(len(os.Args), os.Args)
 	window := widgets.NewQMainWindow(nil, 0)
 	icon := gui.NewQIcon5("icons/pepega.png")

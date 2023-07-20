@@ -82,3 +82,24 @@ func GetAllDatabases() ([]models.Database, error) {
 func OpenDatabase() {
 	log.Println("Open database")
 }
+
+func CreateCategory(d string, name string) (models.Category, error) {
+	log.Println("Create category")
+	db, err := gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return models.Category{}, err
+	}
+	var database models.Database
+	db.Preload("Categories").First(&database, "name = ?", d)
+	for _, category := range database.Categories {
+		if category.Name == name {
+			return models.Category{}, fmt.Errorf("category already exists")
+		}
+	}
+	var category models.Category
+	category.Name = name
+	category.DatabaseID = database.ID
+	db.Create(&category)
+	return category, nil
+}
