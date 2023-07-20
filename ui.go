@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"password-manager/controller"
@@ -12,19 +13,30 @@ import (
 	"github.com/therecipe/qt/widgets"
 )
 
+var tree *widgets.QTreeWidget = nil
+
 func createMenu() *widgets.QMenuBar {
 	menu := widgets.NewQMenuBar(nil)
 	file := menu.AddMenu2("File")
 
-	// create action for menu File
 	newDatabase := widgets.NewQAction(nil)
 	newDatabase.SetIcon(gui.NewQIcon5("icons/category.svg"))
 	newDatabase.SetText("New database")
 	newDatabase.ConnectTriggered(func(bool) {
 		fmt.Println("New database")
+		controller.CreateDatabase("test")
+	})
+
+	openDatabase := widgets.NewQAction(nil)
+	openDatabase.SetIcon(gui.NewQIcon5("icons/open.svg"))
+	openDatabase.SetText("Open database")
+	openDatabase.ConnectTriggered(func(bool) {
+		fmt.Println("Open database")
+		controller.OpenDatabase()
 	})
 
 	file.InsertAction(nil, newDatabase)
+	file.InsertAction(nil, openDatabase)
 
 	return menu
 }
@@ -51,8 +63,8 @@ func createToolBar() *widgets.QToolBar {
 	remove.SetIcon(gui.NewQIcon5("icons/remove.svg"))
 	remove.SetToolTip("Remove")
 
-	tool.InsertAction(nil, save)
 	tool.InsertAction(nil, category)
+	tool.InsertAction(nil, save)
 	tool.InsertAction(nil, add)
 	tool.InsertAction(nil, remove)
 
@@ -64,24 +76,31 @@ func createSideMenu() *widgets.QWidget {
 	widget.SetFixedWidth(100)
 	widget.SetMaximumWidth(200)
 
-	tree := widgets.NewQTreeWidget(nil)
+	tree = widgets.NewQTreeWidget(nil)
 	tree.SetHeaderHidden(true)
 	tree.SetColumnCount(1)
-	tree.SetColumnWidth(0, 100)
-	tree.SetIndentation(0)
-	tree.SetFocusPolicy(1)
-	tree.SetSelectionMode(0)
 	tree.SetAnimated(true)
 	tree.SetUniformRowHeights(true)
-	tree.SetRootIsDecorated(false)
-	tree.SetItemsExpandable(false)
+	tree.SetItemsExpandable(true)
 	tree.SetHorizontalScrollBarPolicy(1)
 	tree.SetVerticalScrollBarPolicy(1)
 	tree.SetAutoScroll(true)
 	tree.SetAutoScrollMargin(10)
 
-	item1 := widgets.NewQTreeWidgetItem2([]string{"Database"}, 0)
-	tree.AddTopLevelItem(item1)
+	databases, err := controller.GetAllDatabases()
+	if err != nil {
+		log.Println(err)
+		panic(err) // handle this in a popup
+	}
+	for _, database := range databases {
+		parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
+		tree.AddTopLevelItem(parent)
+		for _, category := range database.Categories {
+			child := widgets.NewQTreeWidgetItem2([]string{category.Name}, 0)
+			parent.AddChild(child)
+		}
+		parent.SetExpanded(true)
+	}
 
 	layout := widgets.NewQHBoxLayout2(widget)
 	layout.SetContentsMargins(0, 0, 0, 0)
@@ -105,9 +124,9 @@ func createMain() *widgets.QWidget {
 }
 
 func main() {
+	log.Println("Start application")
 	controller.Init()
-	//log.SetFlags(0)
-	//log.SetOutput(ioutil.Discard)
+	controller.CreateDatabaseAndCategoryIfNotExist()
 	app := widgets.NewQApplication(len(os.Args), os.Args)
 	window := widgets.NewQMainWindow(nil, 0)
 	icon := gui.NewQIcon5("icons/pepega.png")

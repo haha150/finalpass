@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"log"
 	"password-manager/models"
 
 	"gorm.io/driver/sqlite"
@@ -9,34 +10,75 @@ import (
 )
 
 func Init() error {
+	log.Println("Init database")
 	db, err := gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
-
-	// Create the database if it doesn't exist
-	err = db.AutoMigrate(&models.Database{})
+	err = db.AutoMigrate(&models.Database{}, &models.Category{}, &models.Secret{})
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-
 	return nil
 }
 
-// create new row in table database
-func CreateDatabase(name string) error {
+func CreateDatabase(name string) (models.Database, error) {
+	log.Println("Create database")
 	db, err := gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
+		return models.Database{}, err
+	}
+	var database models.Database
+	database.Name = name
+	db.Create(&database)
+	var category models.Category
+	category.Name = "General"
+	category.DatabaseID = database.ID
+	db.Create(&category)
+	return database, nil
+}
+
+func CreateDatabaseAndCategoryIfNotExist() error {
+	log.Println("Create database and category if not exist")
+	db, err := gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
 		return err
 	}
-
-	result := db.Create(&models.Database{Name: name})
-	if result.Error != nil {
-		return result.Error
+	var database models.Database
+	err2 := db.First(&database).Error
+	if err2 != nil && err2 == gorm.ErrRecordNotFound {
+		database.Name = "Database"
+		db.Create(&database)
 	}
-
+	var category models.Category
+	err3 := db.First(&category, "name = ?", "General").Error
+	if err3 != nil && err3 == gorm.ErrRecordNotFound {
+		category.Name = "General"
+		category.DatabaseID = database.ID
+		db.Create(&category)
+	}
 	return nil
+}
+
+func GetAllDatabases() ([]models.Database, error) {
+	log.Println("Get all databases with categories and secrets")
+	db, err := gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	var databases []models.Database
+	result := db.Preload("Categories.Secrets").Find(&databases)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return databases, nil
+}
+
+func OpenDatabase() {
+	log.Println("Open database")
 }
