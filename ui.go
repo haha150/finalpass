@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/haha150/password-manager/controllers/security"
+	"password-manager/security"
 
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"

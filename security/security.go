@@ -1,4 +1,4 @@
-package controllers
+package security
 
 import (
 	"crypto/rand"
@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/chacha20"
 )
 
-func crypted() {
+func Crypted() {
 	// Create a 256-bit key and 96-bit nonce for encryption
 	key := make([]byte, 32)
 	nonce := make([]byte, 12)
