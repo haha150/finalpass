@@ -1,4 +1,4 @@
-module password-manager
+module github.com/haha150/password-manager
 
 go 1.20
 

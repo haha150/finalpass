@@ -10,6 +10,8 @@ tar -xvf go1.20.6.linux-amd64.tar.gz
 
 sudo mv go /usr/local/
 
+export PATH=$PATH:/usr/local/go/bin
+
 ## Build & run
 
 go mod init password-manager

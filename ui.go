@@ -1,57 +1,14 @@
 package main
 
 import (
-	"crypto/rand"
-	"fmt"
-	"io"
-	"log"
-	"golang.org/x/crypto/chacha20"
-	"io/ioutil"
 	"os"
-	// "strings"
 
-	// "github.com/therecipe/qt/core"
-	"github.com/therecipe/qt/widgets"
+	"github.com/haha150/password-manager/controllers/security"
+
+	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
+	"github.com/therecipe/qt/widgets"
 )
-
-func crypted() {
-	// Create a 256-bit key and 96-bit nonce for encryption
-	key := make([]byte, 32)
-	nonce := make([]byte, 12)
-	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		log.Fatal(err)
-	}
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		log.Fatal(err)
-	}
-
-	plaintext := []byte("Hello, World!")
-
-	// Create a new ChaCha20 cipher
-	c, err := chacha20.NewUnauthenticatedCipher(key, nonce)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Encrypt the plaintext
-	ciphertext := make([]byte, len(plaintext))
-	c.XORKeyStream(ciphertext, plaintext)
-
-	fmt.Printf("Ciphertext: %x\n", ciphertext)
-
-	// Create a new ChaCha20 cipher for decryption
-	decryptionCipher, err := chacha20.NewUnauthenticatedCipher(key, nonce)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Decrypt the ciphertext
-	decrypted := make([]byte, len(ciphertext))
-	decryptionCipher.XORKeyStream(decrypted, ciphertext)
-
-	fmt.Printf("Decrypted: %s\n", decrypted)
-}
 
 func createMenu() *widgets.QMenuBar {
 	menu := widgets.NewQMenuBar(nil)
@@ -59,14 +16,43 @@ func createMenu() *widgets.QMenuBar {
 	return menu
 }
 
+func createToolBar() *widgets.QToolBar {
+	tool := widgets.NewQToolBar2(nil)
+	tool.SetIconSize(core.NewQSize2(32, 32))
+	tool.SetStyleSheet("background-color: #FFFFFF;")
+	tool.SetFixedHeight(50)
+
+	save := widgets.NewQAction(nil)
+	save.SetIcon(gui.NewQIcon5("icons/save.svg"))
+	save.SetToolTip("Save")
+
+	category := widgets.NewQAction(nil)
+	category.SetIcon(gui.NewQIcon5("icons/category.svg"))
+	category.SetToolTip("Category")
+
+	add := widgets.NewQAction(nil)
+	add.SetIcon(gui.NewQIcon5("icons/add.svg"))
+	add.SetToolTip("Add")
+
+	remove := widgets.NewQAction(nil)
+	remove.SetIcon(gui.NewQIcon5("icons/remove.svg"))
+	remove.SetToolTip("Remove")
+
+	tool.InsertAction(nil, save)
+	tool.InsertAction(nil, category)
+	tool.InsertAction(nil, add)
+	tool.InsertAction(nil, remove)
+
+	return tool
+}
+
 func createSideMenu() *widgets.QWidget {
 	widget := widgets.NewQWidget(nil, 0)
 	widget.SetFixedWidth(100)
-	widget.SetStyleSheet("background-color: #F0F0F0;")
+	widget.SetMaximumWidth(200)
 
 	tree := widgets.NewQTreeWidget(nil)
 	tree.SetHeaderHidden(true)
-	tree.SetStyleSheet("background-color: #F0F0F0;")
 	tree.SetColumnCount(1)
 	tree.SetColumnWidth(0, 100)
 	tree.SetIndentation(0)
@@ -85,18 +71,12 @@ func createSideMenu() *widgets.QWidget {
 	tree.AddTopLevelItem(item1)
 
 	layout := widgets.NewQHBoxLayout2(widget)
+	layout.SetContentsMargins(0, 0, 0, 0)
+	layout.SetSpacing(0)
 	layout.AddWidget(tree, 0, 0)
 
 	return widget
 }
-
-func createLine() *widgets.QWidget {
-	widget := widgets.NewQWidget(nil, 0)
-	widget.SetFixedWidth(1)
-	widget.SetStyleSheet("background-color: #AAAAAA;")
-	return widget
-}
-
 
 func createMain() *widgets.QWidget {
 	widget := widgets.NewQWidget(nil, 0)
@@ -112,27 +92,28 @@ func createMain() *widgets.QWidget {
 }
 
 func main() {
-	log.SetFlags(0)
-	log.SetOutput(ioutil.Discard)
+	//log.SetFlags(0)
+	//log.SetOutput(ioutil.Discard)
 	app := widgets.NewQApplication(len(os.Args), os.Args)
 	window := widgets.NewQMainWindow(nil, 0)
-	icon := gui.NewQIcon5("pepega.png")
+	icon := gui.NewQIcon5("icons/pepega.png")
 	window.SetWindowIcon(icon)
 	window.SetMinimumSize2(800, 600)
 	window.SetWindowTitle("Password manager")
 	menu := createMenu()
 	window.SetMenuBar(menu)
+	tool := createToolBar()
+	window.AddToolBar(core.Qt__TopToolBarArea, tool)
 	central := widgets.NewQWidget(nil, 0)
 	mainLayout := widgets.NewQVBoxLayout2(central)
-	layout := widgets.NewQHBoxLayout2(nil)
 	side := createSideMenu()
-	line := createLine()
 	main := createMain()
-	layout.AddWidget(side, 0, 0)
-	layout.AddWidget(line, 0, 0)
-	layout.AddWidget(main, 0, 0)
+	splitter := widgets.NewQSplitter(nil)
+	splitter.AddWidget(side)
+	splitter.AddWidget(main)
+	security.Crypted()
+	mainLayout.AddWidget(splitter, 0, 0)
 	window.SetCentralWidget(central)
-	mainLayout.AddLayout(layout, 0)
 	window.Show()
 	app.Exec()
 }
