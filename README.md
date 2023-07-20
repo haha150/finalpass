@@ -22,4 +22,8 @@ go get github.com/therecipe/qt/widgets
 
 go get golang.org/x/crypto
 
+go get gorm.io/gorm
+
+go get gorm.io/driver/sqlite
+
 go run .

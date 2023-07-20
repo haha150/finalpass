@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
+	"password-manager/controller"
 	"password-manager/security"
 
 	"github.com/therecipe/qt/core"
@@ -12,7 +14,18 @@ import (
 
 func createMenu() *widgets.QMenuBar {
 	menu := widgets.NewQMenuBar(nil)
-	menu.AddMenu2("File")
+	file := menu.AddMenu2("File")
+
+	// create action for menu File
+	newDatabase := widgets.NewQAction(nil)
+	newDatabase.SetIcon(gui.NewQIcon5("icons/category.svg"))
+	newDatabase.SetText("New database")
+	newDatabase.ConnectTriggered(func(bool) {
+		fmt.Println("New database")
+	})
+
+	file.InsertAction(nil, newDatabase)
+
 	return menu
 }
 
@@ -92,6 +105,7 @@ func createMain() *widgets.QWidget {
 }
 
 func main() {
+	controller.Init()
 	//log.SetFlags(0)
 	//log.SetOutput(ioutil.Discard)
 	app := widgets.NewQApplication(len(os.Args), os.Args)
