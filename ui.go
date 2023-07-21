@@ -19,6 +19,7 @@ var group *widgets.QAction = nil
 var sub *widgets.QAction = nil
 var add *widgets.QAction = nil
 var save *widgets.QAction = nil
+var table *widgets.QTableWidget = nil
 var fileDB string = ""
 
 func createMenu() *widgets.QMenuBar {
@@ -103,8 +104,6 @@ func createToolBar() *widgets.QToolBar {
 			} else {
 				showError("Database already exist!")
 			}
-		} else {
-			showError("Failed to create database!")
 		}
 	})
 
@@ -138,8 +137,6 @@ func createToolBar() *widgets.QToolBar {
 			save.SetEnabled(true)
 			sub.SetEnabled(true)
 			fileDB = file
-		} else {
-			showError("Failed to open database!")
 		}
 	})
 
@@ -159,34 +156,42 @@ func createToolBar() *widgets.QToolBar {
 		log.Println("New secret group")
 		log.Println(tree.CurrentItem().Text(0))
 		log.Println(tree.CurrentItem().Parent().Text(0))
-		if tree.CurrentItem().Parent().Text(0) == "" {
-			grp, err := controller.CreateSecretGroup(fileDB, tree.CurrentItem().Text(0), "abcd")
-			if err != nil {
-				log.Println(err)
-				showError("Failed to add secret group!")
-				return
+		grp := getSecretGroup()
+		if grp != "" {
+			if tree.CurrentItem().Parent().Text(0) == "" {
+				grp, err := controller.CreateSecretGroup(fileDB, tree.CurrentItem().Text(0), grp)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to add secret group!")
+					return
+				} else {
+					tree.CurrentItem().AddChild(widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0))
+				}
 			} else {
-				tree.CurrentItem().AddChild(widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0))
+				grp, err := controller.CreateSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), grp)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to add secret group!")
+					return
+				} else {
+					tree.CurrentItem().Parent().AddChild(widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0))
+				}
 			}
 		} else {
-			grp, err := controller.CreateSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), "abcd2")
-			if err != nil {
-				log.Println(err)
-				showError("Failed to add secret group!")
-				return
-			} else {
-				tree.CurrentItem().Parent().AddChild(widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0))
-			}
+			showError("Failed to add secret group!")
 		}
 	})
 	group.SetEnabled(false)
 
 	add = widgets.NewQAction(nil)
 	add.SetIcon(gui.NewQIcon5("icons/key.svg"))
-	add.SetToolTip("Add new entry")
+	add.SetToolTip("Add new secret")
 	add.ConnectTriggered(func(bool) {
-		log.Println("New entry")
-		// controller.CreateSecret("test")
+		log.Println("New secret")
+
+		s := getSecret()
+		if s != "" {
+		}
 
 	})
 	add.SetEnabled(false)
@@ -248,11 +253,23 @@ func createMain() *widgets.QWidget {
 	widget := widgets.NewQWidget(nil, 0)
 	widget.SetStyleSheet("background-color: #FFFFFF;")
 
-	l1 := widgets.NewQLabel(nil, 0)
-	l1.SetText("Home")
+	table = widgets.NewQTableWidget(nil)
+	table.SetColumnCount(5)
+	table.SetRowCount(0)
+	table.SetHorizontalHeaderLabels([]string{"Title", "Username", "Password", "URL", "Description"})
+	table.SetEditTriggers(widgets.QAbstractItemView__NoEditTriggers)
+	table.SetSelectionBehavior(widgets.QAbstractItemView__SelectRows)
+	table.SetSelectionMode(widgets.QAbstractItemView__SingleSelection)
+	table.SetShowGrid(true)
+	table.SetHorizontalScrollBarPolicy(1)
+	table.SetVerticalScrollBarPolicy(1)
+	table.SetAutoScroll(true)
+	table.SetAutoScrollMargin(10)
 
 	layout := widgets.NewQHBoxLayout2(widget)
-	layout.AddWidget(l1, 0, 0)
+	layout.SetContentsMargins(0, 0, 0, 0)
+	layout.SetSpacing(0)
+	layout.AddWidget(table, 0, 0)
 
 	return widget
 }
@@ -315,6 +332,143 @@ func getSecretGroup() string {
 	return ""
 }
 
+func getSecret() string {
+	dialog := widgets.NewQDialog(nil, 0)
+	dialog.SetWindowTitle("Create secret")
+
+	layout := widgets.NewQVBoxLayout2(dialog)
+
+	horizontalLayout := widgets.NewQHBoxLayout2(nil)
+
+	formLayout := widgets.NewQFormLayout(nil)
+
+	password := controller.GenerateStrongPassword(20)
+
+	titleField := widgets.NewQLineEdit(nil)
+	usernameField := widgets.NewQLineEdit(nil)
+	passwordField := widgets.NewQLineEdit(nil)
+	repeatField := widgets.NewQLineEdit(nil)
+	urlField := widgets.NewQLineEdit(nil)
+	descriptionField := widgets.NewQTextEdit(nil)
+
+	usernameField.SetStyleSheet("background-color: red")
+
+	passwordField.SetText(password)
+	passwordField.SetEchoMode(2)
+	passwordField.SetStyleSheet("background-color: green")
+
+	repeatField.SetText(password)
+	repeatField.SetEchoMode(2)
+	repeatField.SetStyleSheet("background-color: green")
+
+	usernameField.ConnectTextChanged(func(_ string) {
+		if usernameField.Text() != "" {
+			usernameField.SetStyleSheet("background-color: green")
+		} else {
+			usernameField.SetStyleSheet("background-color: red")
+		}
+	})
+
+	passwordField.ConnectTextChanged(func(_ string) {
+		if passwordField.Text() != repeatField.Text() {
+			passwordField.SetStyleSheet("background-color: red")
+			repeatField.SetStyleSheet("background-color: red")
+		} else {
+			passwordField.SetStyleSheet("background-color: green")
+			repeatField.SetStyleSheet("background-color: green")
+		}
+	})
+
+	formLayout.AddRow3("Title:", titleField)
+	formLayout.AddRow3("Username:", usernameField)
+	formLayout.AddRow3("Password:", passwordField)
+	formLayout.AddRow3("Repeat password:", repeatField)
+	formLayout.AddRow3("URL:", urlField)
+	formLayout.AddRow3("Description:", descriptionField)
+
+	formLayout2 := widgets.NewQFormLayout(nil)
+
+	sh := gui.NewQIcon5("icons/show.svg")
+	show := widgets.NewQPushButton3(sh, "", nil)
+	show.SetStyleSheet("border-width: 0px;")
+	show.ConnectClicked(func(bool) {
+		if passwordField.EchoMode() == 2 {
+			passwordField.SetEchoMode(0)
+			repeatField.SetEchoMode(0)
+			sh = gui.NewQIcon5("icons/dontshow.png")
+			show.SetIcon(sh)
+		} else {
+			passwordField.SetEchoMode(2)
+			repeatField.SetEchoMode(2)
+			sh = gui.NewQIcon5("icons/show.svg")
+			show.SetIcon(sh)
+		}
+	})
+
+	button := widgets.NewQPushButton3(gui.NewQIcon5("icons/refresh.svg"), "", nil)
+	button.SetStyleSheet("border-width: 0px;")
+
+	button.ConnectClicked(func(bool) {
+		password = controller.GenerateStrongPassword(20)
+		passwordField.SetText(password)
+		repeatField.SetText(password)
+		passwordField.SetStyleSheet("background-color: green")
+		repeatField.SetStyleSheet("background-color: green")
+	})
+
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
+	formLayout2.AddRow5(show)
+	formLayout2.AddRow5(button)
+
+	horizontalLayout.AddLayout(formLayout, 0)
+	horizontalLayout.AddLayout(formLayout2, 0)
+
+	layout.AddLayout(horizontalLayout, 0)
+
+	buttons := widgets.NewQDialogButtonBox(nil)
+	buttons.SetOrientation(core.Qt__Horizontal)
+	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
+	buttons.ConnectAccepted(func() {
+		if passwordField.Text() == repeatField.Text() && usernameField.Text() != "" {
+			dialog.Accept()
+		} else {
+			showError("Missing username or passwords do not match!")
+		}
+	})
+	buttons.ConnectRejected(func() {
+		dialog.Reject()
+	})
+	layout.AddWidget(buttons, 0, core.Qt__AlignRight)
+
+	dialog.SetModal(true)
+	dialog.Show()
+
+	if dialog.Exec() == int(widgets.QDialog__Accepted) {
+		title := titleField.Text()
+		username := usernameField.Text()
+		password := passwordField.Text()
+		repeat := repeatField.Text()
+		url := urlField.Text()
+		description := descriptionField.ToPlainText()
+		log.Println(title)
+		log.Println(username)
+		log.Println(password)
+		log.Println(repeat)
+		log.Println(url)
+		log.Println(description)
+	}
+	return ""
+}
+
 func saveFile() string {
 	dialog := widgets.NewQFileDialog(nil, 0)
 	file := dialog.GetSaveFileName(nil, "Create new database", "", "Database (*.db)", "", 0)
@@ -362,5 +516,6 @@ func main() {
 	mainLayout.AddWidget(splitter, 0, 0)
 	window.SetCentralWidget(central)
 	window.Show()
+	getSecret()
 	app.Exec()
 }
