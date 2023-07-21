@@ -14,6 +14,15 @@ import (
 	"github.com/therecipe/qt/widgets"
 )
 
+type Secret struct {
+	Title       string
+	Username    string
+	Password    string
+	Repeat      string
+	URL         string
+	Description string
+}
+
 var tree *widgets.QTreeWidget = nil
 var group *widgets.QAction = nil
 var sub *widgets.QAction = nil
@@ -188,10 +197,8 @@ func createToolBar() *widgets.QToolBar {
 	add.SetToolTip("Add new secret")
 	add.ConnectTriggered(func(bool) {
 		log.Println("New secret")
-
-		s := getSecret()
-		if s != "" {
-		}
+		secret := getSecret()
+		log.Println(secret)
 
 	})
 	add.SetEnabled(false)
@@ -332,7 +339,7 @@ func getSecretGroup() string {
 	return ""
 }
 
-func getSecret() string {
+func getSecret() Secret {
 	dialog := widgets.NewQDialog(nil, 0)
 	dialog.SetWindowTitle("Create secret")
 
@@ -453,20 +460,16 @@ func getSecret() string {
 	dialog.Show()
 
 	if dialog.Exec() == int(widgets.QDialog__Accepted) {
-		title := titleField.Text()
-		username := usernameField.Text()
-		password := passwordField.Text()
-		repeat := repeatField.Text()
-		url := urlField.Text()
-		description := descriptionField.ToPlainText()
-		log.Println(title)
-		log.Println(username)
-		log.Println(password)
-		log.Println(repeat)
-		log.Println(url)
-		log.Println(description)
+		return Secret{
+			Title:       titleField.Text(),
+			Username:    usernameField.Text(),
+			Password:    passwordField.Text(),
+			Repeat:      repeatField.Text(),
+			URL:         urlField.Text(),
+			Description: descriptionField.ToPlainText(),
+		}
 	}
-	return ""
+	return Secret{}
 }
 
 func saveFile() string {
