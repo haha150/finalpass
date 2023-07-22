@@ -75,6 +75,23 @@ func GetAllDatabases(file string) ([]models.Database, error) {
 	return databases, nil
 }
 
+func GetSecrets(file string, d string, g string) ([]models.Secret, error) {
+	log.Println("Get secrets")
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	var database models.Database
+	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
+	for _, group := range database.SecretGroups {
+		if group.Name == g {
+			return group.Secrets, nil
+		}
+	}
+	return nil, fmt.Errorf("secret group not found")
+}
+
 func CreateSecretGroup(file string, d string, name string) (models.SecretGroup, error) {
 	log.Println("Create secret group")
 	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
@@ -94,6 +111,25 @@ func CreateSecretGroup(file string, d string, name string) (models.SecretGroup, 
 	group.DatabaseID = database.ID
 	db.Create(&group)
 	return group, nil
+}
+
+func CreateSecret(file string, d string, g string, s models.Secret) (models.Secret, error) {
+	log.Println("Create secret")
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return models.Secret{}, err
+	}
+	var database models.Database
+	db.Preload("SecretGroups").First(&database, "name = ?", d)
+	for _, grp := range database.SecretGroups {
+		if grp.Name == g {
+			s.SecretGroupID = grp.ID
+			db.Create(&s)
+			return s, nil
+		}
+	}
+	return models.Secret{}, fmt.Errorf("secret group not found")
 }
 
 func GenerateStrongPassword(length int) string {
