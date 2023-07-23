@@ -419,6 +419,10 @@ func createSideMenu() *widgets.QWidget {
 					tree.Clear()
 					table.ClearContents()
 					table.SetRowCount(0)
+					group.SetEnabled(false)
+					add.SetEnabled(false)
+					save.SetEnabled(false)
+					sub.SetEnabled(false)
 				}
 			}
 		} else {
