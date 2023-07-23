@@ -59,6 +59,32 @@ func CreateDatabaseAndSecretGroupIfNotExist(file string, name string) error {
 	return nil
 }
 
+func CreateSubDatabase(file string, name string) (models.Database, error) {
+	log.Println("Create sub database")
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return models.Database{}, err
+	}
+	var database models.Database
+	err2 := db.First(&database).Error
+	if err2 != nil && err2 == gorm.ErrRecordNotFound {
+		return models.Database{}, fmt.Errorf("database not found")
+	}
+	var subDatabase models.Database
+	err3 := db.First(&subDatabase, "name = ?", name).Error
+	if err3 != nil && err3 == gorm.ErrRecordNotFound {
+		subDatabase.Name = name
+		db.Create(&subDatabase)
+		var group models.SecretGroup
+		group.Name = "General"
+		group.DatabaseID = subDatabase.ID
+		db.Create(&group)
+		return subDatabase, nil
+	}
+	return models.Database{}, fmt.Errorf("database not found")
+}
+
 func GetAllDatabases(file string) ([]models.Database, error) {
 	log.Println("Get all databases with secret groups and secrets")
 	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
@@ -82,10 +108,27 @@ func GetDatabase(file string, d string) (models.Database, error) {
 		return models.Database{}, err
 	}
 	var database models.Database
+	result := db.Preload("SecretGroups").First(&database, "name = ?", d)
+	if result.Error != nil {
+		return models.Database{}, result.Error
+	}
+	return database, nil
+}
+
+func UpdateDatabase(file string, d string, name string) (models.Database, error) {
+	log.Println("Update database")
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return models.Database{}, err
+	}
+	var database models.Database
 	result := db.Find(&database, "name = ?", d)
 	if result.Error != nil {
 		return models.Database{}, result.Error
 	}
+	database.Name = name
+	db.Save(&database)
 	return database, nil
 }
 
@@ -276,4 +319,23 @@ func DeleteSecretGroup(file string, d string, g string) error {
 		}
 	}
 	return fmt.Errorf("secret group not found")
+}
+
+func DeleteDatabase(file string, d string) error {
+	log.Println("Delete database")
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	var database models.Database
+	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
+	for _, group := range database.SecretGroups {
+		for _, secret := range group.Secrets {
+			db.Delete(&secret)
+		}
+		db.Delete(&group)
+	}
+	db.Delete(&database)
+	return nil
 }

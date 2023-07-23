@@ -87,6 +87,7 @@ func createToolBar() *widgets.QToolBar {
 					}
 					tree.Clear()
 					table.ClearContents()
+					table.SetRowCount(0)
 					for _, database := range databases {
 						parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
 						parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
@@ -168,7 +169,31 @@ func createToolBar() *widgets.QToolBar {
 	sub.SetToolTip("Create sub database")
 	sub.ConnectTriggered(func(bool) {
 		log.Println("Create sub database")
-
+		db := getSubDatabaseName("")
+		if db != "" {
+			database, err := controller.CreateSubDatabase(fileDB, db)
+			if err != nil {
+				log.Println(err)
+				showError("Failed to add sub database!")
+				return
+			} else {
+				db, err := controller.GetDatabase(fileDB, database.Name)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to get data!")
+					return
+				}
+				parent := widgets.NewQTreeWidgetItem2([]string{db.Name}, 0)
+				parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+				tree.AddTopLevelItem(parent)
+				for _, group := range db.SecretGroups {
+					child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
+					child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					parent.AddChild(child)
+				}
+				parent.SetExpanded(true)
+			}
+		}
 	})
 	sub.SetEnabled(false)
 
@@ -201,8 +226,6 @@ func createToolBar() *widgets.QToolBar {
 					tree.CurrentItem().Parent().AddChild(g)
 				}
 			}
-		} else {
-			showError("Failed to add secret group!")
 		}
 	})
 	group.SetEnabled(false)
@@ -213,7 +236,6 @@ func createToolBar() *widgets.QToolBar {
 	add.ConnectTriggered(func(bool) {
 		secret := getSecret(models.Secret{})
 		if secret == (models.Secret{}) {
-			showError("Failed to add secret!")
 			return
 		}
 		if tree.CurrentItem().Parent().Text(0) == "" {
@@ -355,7 +377,29 @@ func createSideMenu() *widgets.QWidget {
 	edit.SetIcon(gui.NewQIcon5("icons/edit.svg"))
 	edit.ConnectTriggered(func(bool) {
 		if tree.CurrentItem().Parent().Text(0) == "" {
-
+			name := getSubDatabaseName(tree.CurrentItem().Text(0))
+			if name != "" {
+				d, err := controller.UpdateDatabase(fileDB, tree.CurrentItem().Text(0), name)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to update database!")
+					return
+				} else {
+					tree.CurrentItem().SetText(0, d.Name)
+				}
+			}
+		} else {
+			group := getSecretGroup(tree.CurrentItem().Text(0))
+			if group != "" {
+				g, err := controller.UpdateSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), group)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to update secret group!")
+					return
+				} else {
+					tree.CurrentItem().SetText(0, g.Name)
+				}
+			}
 		}
 	})
 
@@ -364,30 +408,18 @@ func createSideMenu() *widgets.QWidget {
 	delete.ConnectTriggered(func(bool) {
 		if tree.CurrentItem().Parent().Text(0) == "" {
 			if tree.CurrentItem().Child(0).Text(0) != "" {
-				group, err := controller.GetSecretGroup(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0))
+				showError("Delete all sub databases first!")
+			} else {
+				err := controller.DeleteDatabase(fileDB, tree.CurrentItem().Text(0))
 				if err != nil {
 					log.Println(err)
-					showError("Failed to delete secret group!")
-					return
-				}
-				err = controller.DeleteSecretGroup(fileDB, tree.CurrentItem().Text(0), group.Name)
-				if err != nil {
-					log.Println(err)
-					showError("Failed to delete secret group!")
+					showError("Failed to delete database!")
 					return
 				} else {
-					tree.CurrentItem().RemoveChild(tree.CurrentItem())
+					tree.Clear()
+					table.ClearContents()
+					table.SetRowCount(0)
 				}
-			} else {
-				showError("Delete all sub database first!")
-				// err := controller.DeleteDatabase(fileDB, tree.CurrentItem().Text(0))
-				// if err != nil {
-				// 	log.Println(err)
-				// 	showError("Failed to delete database!")
-				// 	return
-				// } else {
-				// 	tree.CurrentItem().Parent().RemoveChild(tree.CurrentItem())
-				// }
 			}
 		} else {
 			group, err := controller.GetSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0))
@@ -786,6 +818,29 @@ func newDb() bool {
 	return dialog.Exec() == int(widgets.QMessageBox__Ok)
 }
 
+func getSubDatabaseName(name string) string {
+	dialog := widgets.NewQInputDialog(nil, 0)
+	dialog.SetWindowTitle("Create sub database")
+	dialog.SetLabelText("Specify a new name for the sub database.")
+	dialog.SetOkButtonText("Ok")
+	dialog.SetCancelButtonText("Cancel")
+	dialog.SetTextEchoMode(0)
+	dialog.SetInputMode(widgets.QInputDialog__TextInput)
+	dialog.SetModal(true)
+
+	if name != "" {
+		dialog.SetWindowTitle("Edit sub database")
+		dialog.SetLabelText("Specify a new name for the sub database.")
+		dialog.SetTextValue(name)
+	}
+
+	dialog.Show()
+	if dialog.Exec() == 1 {
+		return dialog.TextValue()
+	}
+	return ""
+}
+
 func getSecretGroup(group string) string {
 	dialog := widgets.NewQInputDialog(nil, 0)
 	dialog.SetWindowTitle("Create secret group")
@@ -798,7 +853,7 @@ func getSecretGroup(group string) string {
 
 	if group != "" {
 		dialog.SetWindowTitle("Edit secret group")
-		dialog.SetLabelText("Specify a name for the secret group.")
+		dialog.SetLabelText("Specify a new name for the secret group.")
 		dialog.SetTextValue(group)
 	}
 
