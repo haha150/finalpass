@@ -9,6 +9,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/therecipe/qt v0.0.0-20200904063919-c0c124a5770d // indirect
 	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/term v0.10.0 // indirect
 	gorm.io/driver/sqlite v1.5.2 // indirect
 	gorm.io/gorm v1.25.2 // indirect
 )
