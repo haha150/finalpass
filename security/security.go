@@ -21,7 +21,7 @@ const (
 	chunkSize  = 1024 * 32
 )
 
-func Enc(password string, plaintext string) {
+func EncryptText(password string, plaintext string) {
 	paswd := []byte(password)
 	salt := make([]byte, SaltSize)
 	if n, err := cryptorand.Read(salt); err != nil || n != SaltSize {
@@ -53,19 +53,31 @@ func Enc(password string, plaintext string) {
 	outfile.Close()
 }
 
-func EncryptFile(password string, plaintext_filename string, simple bool) []byte {
+func EncryptFile(plaintext_file string, password string, tmp_file string) bool {
+	encrypted := encryptFile(plaintext_file, password, tmp_file)
+	err := os.Remove(tmp_file)
+	if err != nil {
+		log.Println("Error when removing file.")
+	}
+	if !encrypted {
+		return false
+	}
+	return true
+}
+
+func encryptFile(plaintext_file string, password string, tmp_file string) bool {
 	paswd := []byte(password)
 
 	salt := make([]byte, SaltSize)
 	if n, err := cryptorand.Read(salt); err != nil || n != SaltSize {
 		log.Println("Error when generating radom salt.")
-		panic(err)
+		return false
 	}
 
-	outfile, err := os.OpenFile(plaintext_filename+".enc", os.O_RDWR|os.O_CREATE, 0666)
+	outfile, err := os.OpenFile(plaintext_file, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("Error when opening/creating output file.")
-		panic(err)
+		return false
 	}
 	defer outfile.Close()
 
@@ -76,13 +88,13 @@ func EncryptFile(password string, plaintext_filename string, simple bool) []byte
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		log.Println("Error when creating cipher.")
-		panic(err)
+		return false
 	}
 
-	infile, err := os.Open(plaintext_filename)
+	infile, err := os.Open(tmp_file)
 	if err != nil {
 		log.Println("Error when opening input file.")
-		panic(err)
+		return false
 	}
 	defer infile.Close()
 
@@ -110,25 +122,23 @@ func EncryptFile(password string, plaintext_filename string, simple bool) []byte
 
 		if err == io.EOF {
 			outfile.Write(encryptedMsgfull)
-			break
+			return true
 		}
 
 		if err != nil {
 			log.Println("Error when reading input file chunk :", err)
-			panic(err)
+			return false
 		}
 	}
-
-	return nil
 }
 
-func Decrypt(password string, ciphertext string, decryptedplaintext string) {
+func DecryptFile(file string, password string, decrypted_file string) bool {
 	passwd := []byte(password)
 
-	infile, err := os.Open(ciphertext)
+	infile, err := os.Open(file)
 	if err != nil {
 		log.Println("Error when opening input file.")
-		panic(err)
+		return false
 	}
 	defer infile.Close()
 
@@ -137,29 +147,29 @@ func Decrypt(password string, ciphertext string, decryptedplaintext string) {
 	if n != SaltSize {
 		log.Printf("Error. Salt should be %d bytes long. salt n : %d", SaltSize, n)
 		log.Println(err)
-		panic("Generated salt is not of required length")
+		return false
 	}
 	if err == io.EOF {
 		log.Println("Encountered EOF error.")
-		panic(err)
+		return false
 	}
 	if err != nil {
 		log.Println("Error encountered :", err)
-		panic(err)
+		return false
 	}
 
 	key := argon2.IDKey(passwd, salt, KeyTime, KeyMemory, KeyThreads, KeySize)
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		log.Println("Error when creating cipher.")
-		panic(err)
+		return false
 	}
 	decbufsize := aead.NonceSize() + chunkSize + aead.Overhead()
 
-	outfile, err := os.OpenFile(decryptedplaintext, os.O_RDWR|os.O_CREATE, 0666)
+	outfile, err := os.OpenFile(decrypted_file, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("Error when opening output file.")
-		panic(err)
+		return false
 	}
 	defer outfile.Close()
 
@@ -172,7 +182,7 @@ func Decrypt(password string, ciphertext string, decryptedplaintext string) {
 			encryptedMsg := buf[:n]
 			if len(encryptedMsg) < aead.NonceSize() {
 				log.Println("Error. Ciphertext is too short.")
-				panic("Ciphertext too short")
+				return false
 			}
 
 			nonce, ciphertext := encryptedMsg[:aead.NonceSize()], encryptedMsg[aead.NonceSize():]
@@ -180,17 +190,17 @@ func Decrypt(password string, ciphertext string, decryptedplaintext string) {
 			plaintext, err := aead.Open(nil, nonce, ciphertext, []byte(string(ad_counter)))
 			if err != nil {
 				log.Println("Error when decrypting ciphertext. May be wrong password or file is damaged.")
-				panic(err)
+				return false
 			}
 
 			outfile.Write(plaintext)
 		}
 		if err == io.EOF {
-			break
+			return true
 		}
 		if err != nil {
 			log.Printf("Error encountered. Read %d bytes: %v", n, err)
-			panic(err)
+			return false
 		}
 
 		ad_counter += 1

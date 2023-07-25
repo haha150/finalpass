@@ -23,6 +23,7 @@ var sub *widgets.QAction = nil
 var add *widgets.QAction = nil
 var save *widgets.QAction = nil
 var table *widgets.QTableWidget = nil
+var masterPassword string = ""
 var fileDB string = ""
 
 func createMenu() *widgets.QMenuBar {
@@ -34,7 +35,6 @@ func createMenu() *widgets.QMenuBar {
 	newDatabase.SetText("New database")
 	newDatabase.ConnectTriggered(func(bool) {
 		fmt.Println("New database")
-		// controller.CreateDatabase("test")
 	})
 
 	openDatabase := widgets.NewQAction(nil)
@@ -46,6 +46,37 @@ func createMenu() *widgets.QMenuBar {
 
 	file.InsertAction(nil, newDatabase)
 	file.InsertAction(nil, openDatabase)
+
+	help := menu.AddMenu2("Help")
+
+	about := widgets.NewQAction(nil)
+	about.SetText("About")
+	about.ConnectTriggered(func(bool) {
+		widget := widgets.NewQWidget(nil, 0)
+		widget.SetWindowTitle("About")
+		widget.SetFixedWidth(300)
+		widget.SetFixedHeight(200)
+		widget.SetStyleSheet("background-color: #FFFFFF;")
+		layout := widgets.NewQVBoxLayout2(widget)
+		layout.SetContentsMargins(0, 0, 0, 0)
+		layout.SetSpacing(0)
+		label := widgets.NewQLabel2("Password Manager", nil, 0)
+		label.SetAlignment(core.Qt__AlignCenter)
+		label.SetStyleSheet("font-size: 20px; font-weight: bold;")
+		label2 := widgets.NewQLabel2("Version 1.0.0", nil, 0)
+		label2.SetAlignment(core.Qt__AlignCenter)
+		label2.SetStyleSheet("font-size: 16px;")
+		label3 := widgets.NewQLabel2("Developed by: x", nil, 0)
+		label3.SetAlignment(core.Qt__AlignCenter)
+		label3.SetOpenExternalLinks(true)
+		label3.SetStyleSheet("font-size: 16px;")
+		layout.AddWidget(label, 0, 0)
+		layout.AddWidget(label2, 0, 0)
+		layout.AddWidget(label3, 0, 0)
+		widget.Show()
+	})
+
+	help.InsertAction(nil, about)
 
 	return menu
 }
@@ -67,19 +98,20 @@ func createToolBar() *widgets.QToolBar {
 				name2 := strings.TrimSuffix(name, filepath.Ext(name))
 				password := createPassword(file)
 				if password != "" {
-					init := controller.InitDB(file)
+					init := controller.InitDB(file, password)
 					if init != nil {
 						log.Println(init)
 						showError("Failed to init database!")
 						return
 					}
-					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, name2)
+					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, name2, password)
 					if create != nil {
 						log.Println(create)
 						showError("Failed to create database!")
 						return
 					}
-					databases, err := controller.GetAllDatabases(file)
+					databases, err := controller.GetAllDatabases(file, password)
+					log.Println(databases)
 					if err != nil {
 						log.Println(err)
 						showError("Failed to get data!")
@@ -103,6 +135,7 @@ func createToolBar() *widgets.QToolBar {
 					add.SetEnabled(true)
 					save.SetEnabled(true)
 					sub.SetEnabled(true)
+					masterPassword = password
 					fileDB = file
 				}
 			} else {
@@ -118,12 +151,23 @@ func createToolBar() *widgets.QToolBar {
 	open.SetToolTip("Open database")
 	open.ConnectTriggered(func(bool) {
 		file := loadFile()
-		if file != "" {
-			databases, err := controller.GetAllDatabases(file)
-			if err != nil {
-				log.Println(err)
-				showError("Failed to get data!")
-				return
+		if file != "" && controller.CheckFileExist(file) {
+			databases := []models.Database{}
+			var err error
+			password := ""
+			for i := 0; i < 3; i++ {
+				password = getPassword(file)
+				if password != "" {
+					databases, err = controller.GetAllDatabases(file, password)
+					if err != nil {
+						log.Println(err)
+						showError("Wrong password!")
+					} else {
+						break
+					}
+				} else {
+					return
+				}
 			}
 			tree.Clear()
 			table.ClearContents()
@@ -158,6 +202,7 @@ func createToolBar() *widgets.QToolBar {
 			add.SetEnabled(true)
 			save.SetEnabled(true)
 			sub.SetEnabled(true)
+			masterPassword = password
 			fileDB = file
 		} else {
 			log.Println("Cancel")
@@ -659,7 +704,7 @@ func createMain() *widgets.QWidget {
 
 func createPassword(file string) string {
 	dialog := widgets.NewQDialog(nil, 0)
-	dialog.SetWindowTitle("Create master key")
+	dialog.SetWindowTitle("Create master password")
 
 	layout := widgets.NewQVBoxLayout2(dialog)
 
@@ -668,7 +713,7 @@ func createPassword(file string) string {
 	formLayout := widgets.NewQFormLayout(nil)
 
 	label := widgets.NewQLabel(nil, 0)
-	label.SetText(fmt.Sprintf("Database: %s\n\nSpecify a new master key, which will be used to encrypt the database.\n\nRemember the master key that you enter, \nif you lose it you will not be able to open the database.", file))
+	label.SetText(fmt.Sprintf("Database: %s\n\nSpecify a new master password, which will be used to encrypt the database.\n\nRemember the master password that you enter, \nif you lose it you will not be able to open the database.", file))
 
 	passwordField := widgets.NewQLineEdit(nil)
 	repeatField := widgets.NewQLineEdit(nil)
@@ -782,8 +827,8 @@ func createPassword(file string) string {
 
 func getPassword(file string) string {
 	dialog := widgets.NewQInputDialog(nil, 0)
-	dialog.SetWindowTitle("Enter master key")
-	dialog.SetLabelText(fmt.Sprintf("Database: %s\n\nEnter master key to open database.", file))
+	dialog.SetWindowTitle("Enter master password")
+	dialog.SetLabelText(fmt.Sprintf("Database: %s\n\nEnter master password to open database.", file))
 	dialog.SetOkButtonText("Ok")
 	dialog.SetCancelButtonText("Cancel")
 	dialog.SetTextEchoMode(2)
