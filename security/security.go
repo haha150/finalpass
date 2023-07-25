@@ -21,36 +21,32 @@ const (
 	chunkSize  = 1024 * 32
 )
 
-func EncryptText(password string, plaintext string) {
+func EncryptText(password string, plaintext string) ([]byte, error) {
 	paswd := []byte(password)
 	salt := make([]byte, SaltSize)
 	if n, err := cryptorand.Read(salt); err != nil || n != SaltSize {
 		log.Println("Error when generating radom salt.")
-		panic(err)
+		return nil, err
 	}
 	key := argon2.IDKey(paswd, salt, KeyTime, KeyMemory, KeyThreads, KeySize)
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		log.Println("Error when creating cipher.")
-		panic(err)
+		return nil, err
 	}
 	n := len(plaintext)
 	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+n+aead.Overhead())
 	if m, err := cryptorand.Read(nonce); err != nil || m != aead.NonceSize() {
 		log.Println("Error when generating random nonce :", err)
 		log.Println("Generated nonce is of following size. m : ", m)
-		panic(err)
+		return nil, err
 	}
 	ad_counter := 0
+	encryptedMsgfull := make([]byte, 0)
 	ciphertext := aead.Seal(nonce, nonce, []byte(plaintext), []byte(string(ad_counter)))
-	outfile, err := os.OpenFile("ab.tst.enc2", os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		log.Println("Error when opening/creating output file.")
-		panic(err)
-	}
-	outfile.Write(salt)
-	outfile.Write(ciphertext)
-	outfile.Close()
+	encryptedMsgfull = append(encryptedMsgfull, salt...)
+	encryptedMsgfull = append(encryptedMsgfull, ciphertext...)
+	return encryptedMsgfull, nil
 }
 
 func EncryptFile(plaintext_file string, password string, tmp_file string) bool {
@@ -205,6 +201,27 @@ func DecryptFile(file string, password string, decrypted_file string) bool {
 
 		ad_counter += 1
 	}
+}
+
+func DecryptText(password string, encryptedText []byte) ([]byte, error) {
+	paswd := []byte(password)
+	salt := encryptedText[:SaltSize]
+	encryptedMsg := encryptedText[SaltSize:]
+	key := argon2.IDKey(paswd, salt, KeyTime, KeyMemory, KeyThreads, KeySize)
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
+		log.Println("Error when creating cipher.")
+		return nil, err
+	}
+	nonce := encryptedMsg[:aead.NonceSize()]
+	ciphertext := encryptedMsg[aead.NonceSize():]
+	ad_counter := 0
+	plaintext, err := aead.Open(nil, nonce, ciphertext, []byte(string(ad_counter)))
+	if err != nil {
+		log.Println("Error when decrypting text.", err)
+		return nil, err
+	}
+	return plaintext, nil
 }
 
 func GenerateStrongPassword(length int) string {

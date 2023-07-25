@@ -22,3 +22,4 @@ go.work
 qtbox
 *.db
 *.db.*
+config.json

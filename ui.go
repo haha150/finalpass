@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,10 @@ import (
 	"github.com/therecipe/qt/widgets"
 )
 
+type Configuration struct {
+	Database string
+}
+
 var tree *widgets.QTreeWidget = nil
 var group *widgets.QAction = nil
 var sub *widgets.QAction = nil
@@ -25,6 +30,7 @@ var save *widgets.QAction = nil
 var table *widgets.QTableWidget = nil
 var masterPassword string = ""
 var fileDB string = ""
+var asterisk = "********************"
 
 func createMenu() *widgets.QMenuBar {
 	menu := widgets.NewQMenuBar(nil)
@@ -137,6 +143,11 @@ func createToolBar() *widgets.QToolBar {
 					sub.SetEnabled(true)
 					masterPassword = password
 					fileDB = file
+					err2 := writeConfig(fileDB)
+					if err2 != nil {
+						log.Println(err2)
+						return
+					}
 				}
 			} else {
 				log.Println("File exists or cancelled")
@@ -162,6 +173,9 @@ func createToolBar() *widgets.QToolBar {
 					if err != nil {
 						log.Println(err)
 						showError("Wrong password!")
+						if i == 2 {
+							return
+						}
 					} else {
 						break
 					}
@@ -190,7 +204,7 @@ func createToolBar() *widgets.QToolBar {
 							table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 							table.SetItem(row, 1, title)
 							table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
-							table.SetItem(row, 3, widgets.NewQTableWidgetItem2(secret.Password, 0))
+							table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 							table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
 							table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
 						}
@@ -204,6 +218,11 @@ func createToolBar() *widgets.QToolBar {
 			sub.SetEnabled(true)
 			masterPassword = password
 			fileDB = file
+			err2 := writeConfig(fileDB)
+			if err2 != nil {
+				log.Println(err2)
+				return
+			}
 		} else {
 			log.Println("Cancel")
 		}
@@ -216,13 +235,13 @@ func createToolBar() *widgets.QToolBar {
 		log.Println("Create sub database")
 		db := getSubDatabaseName("")
 		if db != "" {
-			database, err := controller.CreateSubDatabase(fileDB, db)
+			database, err := controller.CreateSubDatabase(fileDB, masterPassword, db)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to add sub database!")
 				return
 			} else {
-				db, err := controller.GetDatabase(fileDB, database.Name)
+				db, err := controller.GetDatabase(fileDB, masterPassword, database.Name)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to get data!")
@@ -249,7 +268,7 @@ func createToolBar() *widgets.QToolBar {
 		grp := getSecretGroup("")
 		if grp != "" {
 			if tree.CurrentItem().Parent().Text(0) == "" {
-				grp, err := controller.CreateSecretGroup(fileDB, tree.CurrentItem().Text(0), grp)
+				grp, err := controller.CreateSecretGroup(fileDB, masterPassword, tree.CurrentItem().Text(0), grp)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to add secret group!")
@@ -260,7 +279,7 @@ func createToolBar() *widgets.QToolBar {
 					tree.CurrentItem().AddChild(g)
 				}
 			} else {
-				grp, err := controller.CreateSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), grp)
+				grp, err := controller.CreateSecretGroup(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), grp)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to add secret group!")
@@ -280,12 +299,12 @@ func createToolBar() *widgets.QToolBar {
 	add.SetToolTip("Add new secret")
 	add.ConnectTriggered(func(bool) {
 		secret := getSecret(models.Secret{})
-		if secret == (models.Secret{}) {
+		if secret.Username == "" && secret.Password == nil {
 			return
 		}
 		if tree.CurrentItem().Parent().Text(0) == "" {
 			if tree.CurrentItem().Child(0).Text(0) != "" {
-				sct, err := controller.CreateSecret(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), secret)
+				sct, err := controller.CreateSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), secret)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to add secret!")
@@ -298,13 +317,13 @@ func createToolBar() *widgets.QToolBar {
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
-					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(sct.Password, 0))
+					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
 				}
 			}
 		} else {
-			sct, err := controller.CreateSecret(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), secret)
+			sct, err := controller.CreateSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), secret)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to add secret!")
@@ -317,7 +336,7 @@ func createToolBar() *widgets.QToolBar {
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
-				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(sct.Password, 0))
+				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
 			}
@@ -375,7 +394,7 @@ func createSideMenu() *widgets.QWidget {
 		table.SetRowCount(0)
 		if item.Parent().Text(0) == "" {
 			if item.Child(0).Text(0) != "" {
-				secrets, err := controller.GetSecrets(fileDB, item.Text(0), item.Child(0).Text(0))
+				secrets, err := controller.GetSecrets(fileDB, masterPassword, item.Text(0), item.Child(0).Text(0))
 				if err != nil {
 					log.Println(err)
 					showError("Failed to get data!")
@@ -389,13 +408,13 @@ func createSideMenu() *widgets.QWidget {
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
-					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(secret.Password, 0))
+					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
 				}
 			}
 		} else {
-			secrets, err := controller.GetSecrets(fileDB, item.Parent().Text(0), item.Text(0))
+			secrets, err := controller.GetSecrets(fileDB, masterPassword, item.Parent().Text(0), item.Text(0))
 			if err != nil {
 				log.Println(err)
 				showError("Failed to get data!")
@@ -409,7 +428,7 @@ func createSideMenu() *widgets.QWidget {
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
-				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(secret.Password, 0))
+				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
 			}
@@ -424,7 +443,7 @@ func createSideMenu() *widgets.QWidget {
 		if tree.CurrentItem().Parent().Text(0) == "" {
 			name := getSubDatabaseName(tree.CurrentItem().Text(0))
 			if name != "" {
-				d, err := controller.UpdateDatabase(fileDB, tree.CurrentItem().Text(0), name)
+				d, err := controller.UpdateDatabase(fileDB, masterPassword, tree.CurrentItem().Text(0), name)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to update database!")
@@ -436,7 +455,7 @@ func createSideMenu() *widgets.QWidget {
 		} else {
 			group := getSecretGroup(tree.CurrentItem().Text(0))
 			if group != "" {
-				g, err := controller.UpdateSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), group)
+				g, err := controller.UpdateSecretGroup(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), group)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to update secret group!")
@@ -455,7 +474,7 @@ func createSideMenu() *widgets.QWidget {
 			if tree.CurrentItem().Child(0).Text(0) != "" {
 				showError("Delete all sub databases first!")
 			} else {
-				err := controller.DeleteDatabase(fileDB, tree.CurrentItem().Text(0))
+				err := controller.DeleteDatabase(fileDB, masterPassword, tree.CurrentItem().Text(0))
 				if err != nil {
 					log.Println(err)
 					showError("Failed to delete database!")
@@ -471,13 +490,13 @@ func createSideMenu() *widgets.QWidget {
 				}
 			}
 		} else {
-			group, err := controller.GetSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0))
+			group, err := controller.GetSecretGroup(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0))
 			if err != nil {
 				log.Println(err)
 				showError("Failed to delete secret group!")
 				return
 			}
-			err = controller.DeleteSecretGroup(fileDB, tree.CurrentItem().Parent().Text(0), group.Name)
+			err = controller.DeleteSecretGroup(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), group.Name)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to delete secret group!")
@@ -491,6 +510,9 @@ func createSideMenu() *widgets.QWidget {
 	tree.SetContextMenuPolicy(core.Qt__CustomContextMenu)
 
 	tree.ConnectCustomContextMenuRequested(func(pos *core.QPoint) {
+		if tree.TopLevelItemCount() == 0 {
+			return
+		}
 		menu.Exec2(tree.MapToGlobal(pos), nil)
 	})
 
@@ -531,17 +553,17 @@ func createMain() *widgets.QWidget {
 		}
 		if tree.CurrentItem().Parent().Text(0) == "" {
 			if tree.CurrentItem().Child(0).Text(0) != "" {
-				s, err := controller.GetSecret(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
+				s, err := controller.GetSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to update secret!")
 					return
 				}
 				secret := getSecret(s)
-				if secret == (models.Secret{}) {
+				if secret.Username == "" && secret.Password == nil {
 					return
 				}
-				sct, err := controller.UpdateSecret(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer, secret)
+				sct, err := controller.UpdateSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer, secret)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to update secret!")
@@ -552,23 +574,23 @@ func createMain() *widgets.QWidget {
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
-					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(sct.Password, 0))
+					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
 				}
 			}
 		} else {
-			s, err := controller.GetSecret(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
+			s, err := controller.GetSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to update secret!")
 				return
 			}
 			secret := getSecret(s)
-			if secret == (models.Secret{}) {
+			if secret.Username == "" && secret.Password == nil {
 				return
 			}
-			sct, err := controller.UpdateSecret(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer, secret)
+			sct, err := controller.UpdateSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer, secret)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to update secret!")
@@ -579,7 +601,7 @@ func createMain() *widgets.QWidget {
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
-				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(sct.Password, 0))
+				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
 			}
@@ -587,6 +609,56 @@ func createMain() *widgets.QWidget {
 	})
 
 	menu := widgets.NewQMenu(nil)
+
+	copyUsername := menu.AddAction("Copy username")
+	copyUsername.SetIcon(gui.NewQIcon5("icons/username.png"))
+	copyUsername.ConnectTriggered(func(bool) {
+		row := table.CurrentRow()
+		username := table.Item(row, 2).Text()
+		if username != "" {
+			clipboard := gui.QGuiApplication_Clipboard()
+			clipboard.SetText(username, gui.QClipboard__Clipboard)
+		}
+	})
+
+	copyPassword := menu.AddAction("Copy password")
+	copyPassword.SetIcon(gui.NewQIcon5("icons/password.png"))
+	copyPassword.ConnectTriggered(func(bool) {
+		row := table.CurrentRow()
+		id := table.Item(row, 0).Text()
+		integer, err := strconv.Atoi(id)
+		if err != nil {
+			log.Println(err)
+			showError("Failed to copy password!")
+			return
+		}
+		if tree.CurrentItem().Parent().Text(0) == "" {
+			if tree.CurrentItem().Child(0).Text(0) != "" {
+				s, err := controller.GetSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to copy password!")
+					return
+				}
+				clipboard := gui.QGuiApplication_Clipboard()
+				clipboard.SetText(string(s.Password), gui.QClipboard__Clipboard)
+			}
+		} else {
+			s, err := controller.GetSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
+			if err != nil {
+				log.Println(err)
+				showError("Failed to copy password!")
+				return
+			}
+			clipboard := gui.QGuiApplication_Clipboard()
+			clipboard.SetText(string(s.Password), gui.QClipboard__Clipboard)
+		}
+	})
+
+	// separator
+	separator := widgets.NewQAction(nil)
+	separator.SetSeparator(true)
+	menu.InsertAction(nil, separator)
 
 	edit := menu.AddAction("Edit")
 	edit.SetIcon(gui.NewQIcon5("icons/edit.svg"))
@@ -601,17 +673,17 @@ func createMain() *widgets.QWidget {
 		}
 		if tree.CurrentItem().Parent().Text(0) == "" {
 			if tree.CurrentItem().Child(0).Text(0) != "" {
-				s, err := controller.GetSecret(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
+				s, err := controller.GetSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to update secret!")
 					return
 				}
 				secret := getSecret(s)
-				if secret == (models.Secret{}) {
+				if secret.Username == "" && secret.Password == nil {
 					return
 				}
-				sct, err := controller.UpdateSecret(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer, secret)
+				sct, err := controller.UpdateSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer, secret)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to update secret!")
@@ -622,23 +694,23 @@ func createMain() *widgets.QWidget {
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
-					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(sct.Password, 0))
+					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
 				}
 			}
 		} else {
-			s, err := controller.GetSecret(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
+			s, err := controller.GetSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to update secret!")
 				return
 			}
 			secret := getSecret(s)
-			if secret == (models.Secret{}) {
+			if secret.Username == "" && secret.Password == nil {
 				return
 			}
-			sct, err := controller.UpdateSecret(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer, secret)
+			sct, err := controller.UpdateSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer, secret)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to update secret!")
@@ -649,7 +721,7 @@ func createMain() *widgets.QWidget {
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
-				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(sct.Password, 0))
+				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
 			}
@@ -669,7 +741,7 @@ func createMain() *widgets.QWidget {
 		}
 		if tree.CurrentItem().Parent().Text(0) == "" {
 			if tree.CurrentItem().Child(0).Text(0) != "" {
-				err := controller.DeleteSecret(fileDB, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
+				err := controller.DeleteSecret(fileDB, masterPassword, tree.CurrentItem().Text(0), tree.CurrentItem().Child(0).Text(0), integer)
 				if err != nil {
 					log.Println(err)
 					showError("Failed to delete secret!")
@@ -678,7 +750,7 @@ func createMain() *widgets.QWidget {
 				table.RemoveRow(row)
 			}
 		} else {
-			err := controller.DeleteSecret(fileDB, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
+			err := controller.DeleteSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
 			if err != nil {
 				log.Println(err)
 				showError("Failed to delete secret!")
@@ -691,6 +763,9 @@ func createMain() *widgets.QWidget {
 	table.SetContextMenuPolicy(core.Qt__CustomContextMenu)
 
 	table.ConnectCustomContextMenuRequested(func(pos *core.QPoint) {
+		if table.RowCount() == 0 {
+			return
+		}
 		menu.Exec2(table.MapToGlobal(pos), nil)
 	})
 
@@ -951,6 +1026,9 @@ func getSecret(secret models.Secret) models.Secret {
 	})
 
 	passwordField.ConnectTextChanged(func(_ string) {
+		if passwordField.EchoMode() == 0 {
+			repeatField.SetText(passwordField.Text())
+		}
 		if passwordField.Text() != repeatField.Text() {
 			passwordField.SetStyleSheet("background-color: red")
 			repeatField.SetStyleSheet("background-color: red")
@@ -970,12 +1048,12 @@ func getSecret(secret models.Secret) models.Secret {
 		}
 	})
 
-	if secret != (models.Secret{}) {
+	if secret.Username != "" && secret.Password != nil {
 		dialog.SetWindowTitle("Edit secret")
 		titleField.SetText(secret.Title)
 		usernameField.SetText(secret.Username)
-		passwordField.SetText(secret.Password)
-		repeatField.SetText(secret.Password)
+		passwordField.SetText(string(secret.Password))
+		repeatField.SetText(string(secret.Password))
 		urlField.SetText(secret.URL)
 		descriptionField.SetText(secret.Description)
 		if usernameField.Text() != "" {
@@ -1001,11 +1079,14 @@ func getSecret(secret models.Secret) models.Secret {
 		if passwordField.EchoMode() == 2 {
 			passwordField.SetEchoMode(0)
 			repeatField.SetEchoMode(0)
+			repeatField.SetText(passwordField.Text())
+			repeatField.SetDisabled(true)
 			sh = gui.NewQIcon5("icons/dontshow.png")
 			show.SetIcon(sh)
 		} else {
 			passwordField.SetEchoMode(2)
 			repeatField.SetEchoMode(2)
+			repeatField.SetDisabled(false)
 			sh = gui.NewQIcon5("icons/show.svg")
 			show.SetIcon(sh)
 		}
@@ -1062,7 +1143,7 @@ func getSecret(secret models.Secret) models.Secret {
 		return models.Secret{
 			Title:       titleField.Text(),
 			Username:    usernameField.Text(),
-			Password:    passwordField.Text(),
+			Password:    []byte(passwordField.Text()),
 			URL:         urlField.Text(),
 			Description: descriptionField.ToPlainText(),
 		}
@@ -1095,6 +1176,130 @@ func showError(message string) {
 	dialog.Exec()
 }
 
+func writeConfig(db string) error {
+	if _, err := os.Stat("config.json"); os.IsNotExist(err) {
+		file, err2 := os.Create("config.json")
+		if err2 != nil {
+			log.Println(err2)
+			return err2
+		}
+		defer file.Close()
+		config := Configuration{
+			Database: db,
+		}
+		jdata, err3 := json.Marshal(config)
+		if err3 != nil {
+			log.Println(err3)
+			return err3
+		}
+		fmt.Fprintln(file, string(jdata))
+		return nil
+	}
+	file, err := os.Open("config.json")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer file.Close()
+	config := Configuration{
+		Database: db,
+	}
+	jdata, err3 := json.Marshal(config)
+	if err3 != nil {
+		log.Println(err3)
+		return err3
+	}
+	fmt.Fprintln(file, string(jdata))
+	return nil
+}
+
+func readConfig() Configuration {
+	file, err := os.Open("config.json")
+	if err != nil {
+		log.Println(err)
+		return Configuration{}
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	config := Configuration{}
+	err = decoder.Decode(&config)
+	if err != nil {
+		log.Println(err)
+		return Configuration{}
+	}
+	return config
+}
+
+func inits() {
+	config := readConfig()
+	if config.Database == "" {
+		log.Println("No database specified in config.json")
+		return
+	}
+	file := config.Database
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		log.Println("Database file does not exist")
+		err2 := writeConfig("")
+		if err2 != nil {
+			log.Println(err2)
+			return
+		}
+		return
+	}
+	databases := []models.Database{}
+	var err error
+	password := ""
+	for i := 0; i < 3; i++ {
+		password = getPassword(file)
+		if password != "" {
+			databases, err = controller.GetAllDatabases(file, password)
+			if err != nil {
+				log.Println(err)
+				showError("Wrong password!")
+				if i == 2 {
+					return
+				}
+			} else {
+				break
+			}
+		} else {
+			return
+		}
+	}
+	for _, database := range databases {
+		parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
+		parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+		tree.AddTopLevelItem(parent)
+		for i, group := range database.SecretGroups {
+			child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
+			child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+			parent.AddChild(child)
+			if i == 0 {
+				tree.SetCurrentItem(child)
+				for _, secret := range group.Secrets {
+					row := table.RowCount()
+					table.InsertRow(row)
+					title := widgets.NewQTableWidgetItem2(secret.Title, 0)
+					title.SetIcon(gui.NewQIcon5("icons/key.png"))
+					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
+					table.SetItem(row, 1, title)
+					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
+					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
+					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
+					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
+				}
+			}
+		}
+		parent.SetExpanded(true)
+	}
+	group.SetEnabled(true)
+	add.SetEnabled(true)
+	save.SetEnabled(true)
+	sub.SetEnabled(true)
+	masterPassword = password
+	fileDB = file
+}
+
 func main() {
 	log.Println("Start application")
 	app := widgets.NewQApplication(len(os.Args), os.Args)
@@ -1117,5 +1322,6 @@ func main() {
 	mainLayout.AddWidget(splitter, 0, 0)
 	window.SetCentralWidget(central)
 	window.Show()
+	inits()
 	app.Exec()
 }

@@ -20,6 +20,15 @@ func CheckFileExist(file string) bool {
 }
 
 func InitDB(file string, password string) error {
+	err := initDB(file, password)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return fmt.Errorf("error when encrypting file")
+	}
+	return err
+}
+
+func initDB(file string, password string) error {
 	log.Println("Init database")
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
@@ -31,19 +40,25 @@ func InitDB(file string, password string) error {
 		log.Println(err)
 		return err
 	}
-	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
-	if !encrypted {
-		return fmt.Errorf("error when encrypting file")
-	}
+
 	return nil
 }
 
-func CreateDatabaseAndSecretGroupIfNotExist(file string, name string, password string) error {
-	log.Println("Create database and secret group if not exist")
+func CreateDatabaseAndSecretGroupIfNotExist(file string, password string, name string) error {
 	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
 	if !decrypted {
 		return fmt.Errorf("wrong password")
 	}
+	err := createDatabaseAndSecretGroupIfNotExist(file, name)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return fmt.Errorf("error when encrypting file")
+	}
+	return err
+}
+
+func createDatabaseAndSecretGroupIfNotExist(file string, name string) error {
+	log.Println("Create database and secret group if not exist")
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
@@ -65,16 +80,25 @@ func CreateDatabaseAndSecretGroupIfNotExist(file string, name string, password s
 		db.Create(&group)
 	}
 	log.Printf("Created secret group: %s", group.Name)
-	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
-	if !encrypted {
-		return fmt.Errorf("error when encrypting file")
-	}
 	return nil
 }
 
-func CreateSubDatabase(file string, name string) (models.Database, error) {
+func CreateSubDatabase(file string, password string, name string) (models.Database, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.Database{}, fmt.Errorf("wrong password")
+	}
+	sub, err := createSubDatabase(file, name)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.Database{}, fmt.Errorf("error when encrypting file")
+	}
+	return sub, err
+}
+
+func createSubDatabase(file string, name string) (models.Database, error) {
 	log.Println("Create sub database")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.Database{}, err
@@ -99,11 +123,20 @@ func CreateSubDatabase(file string, name string) (models.Database, error) {
 }
 
 func GetAllDatabases(file string, password string) ([]models.Database, error) {
-	log.Println("Get all databases with secret groups and secrets")
 	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
 	if !decrypted {
 		return nil, fmt.Errorf("wrong password")
 	}
+	db, err := getAllDatabases(file)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return nil, fmt.Errorf("error when encrypting file")
+	}
+	return db, err
+}
+
+func getAllDatabases(file string) ([]models.Database, error) {
+	log.Println("Get all databases with secret groups and secrets")
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
@@ -117,9 +150,22 @@ func GetAllDatabases(file string, password string) ([]models.Database, error) {
 	return databases, nil
 }
 
-func GetDatabase(file string, d string) (models.Database, error) {
+func GetDatabase(file string, password string, d string) (models.Database, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.Database{}, fmt.Errorf("wrong password")
+	}
+	db, err := getDatabase(file, d)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.Database{}, fmt.Errorf("error when encrypting file")
+	}
+	return db, err
+}
+
+func getDatabase(file string, d string) (models.Database, error) {
 	log.Println("Get database")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.Database{}, err
@@ -132,9 +178,22 @@ func GetDatabase(file string, d string) (models.Database, error) {
 	return database, nil
 }
 
-func UpdateDatabase(file string, d string, name string) (models.Database, error) {
+func UpdateDatabase(file string, password string, d string, name string) (models.Database, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.Database{}, fmt.Errorf("wrong password")
+	}
+	db, err := updateDatabase(file, d, name)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.Database{}, fmt.Errorf("error when encrypting file")
+	}
+	return db, err
+}
+
+func updateDatabase(file string, d string, name string) (models.Database, error) {
 	log.Println("Update database")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.Database{}, err
@@ -149,9 +208,22 @@ func UpdateDatabase(file string, d string, name string) (models.Database, error)
 	return database, nil
 }
 
-func GetSecrets(file string, d string, g string) ([]models.Secret, error) {
+func GetSecrets(file string, password string, d string, g string) ([]models.Secret, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return nil, fmt.Errorf("wrong password")
+	}
+	sct, err := getSecrets(file, d, g)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return nil, fmt.Errorf("error when encrypting file")
+	}
+	return sct, err
+}
+
+func getSecrets(file string, d string, g string) ([]models.Secret, error) {
 	log.Println("Get secrets")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -166,9 +238,27 @@ func GetSecrets(file string, d string, g string) ([]models.Secret, error) {
 	return nil, fmt.Errorf("secret group not found")
 }
 
-func GetSecret(file string, d string, g string, s int) (models.Secret, error) {
+func GetSecret(file string, password string, d string, g string, s int) (models.Secret, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.Secret{}, fmt.Errorf("wrong password")
+	}
+	sct, err := getSecret(file, d, g, s)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.Secret{}, fmt.Errorf("error when encrypting file")
+	}
+	plaintext, err2 := security.DecryptText(password, sct.Password)
+	if err2 != nil {
+		return models.Secret{}, err2
+	}
+	sct.Password = plaintext
+	return sct, err
+}
+
+func getSecret(file string, d string, g string, s int) (models.Secret, error) {
 	log.Println("Get secret")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.Secret{}, err
@@ -187,9 +277,22 @@ func GetSecret(file string, d string, g string, s int) (models.Secret, error) {
 	return models.Secret{}, fmt.Errorf("secret not found")
 }
 
-func CreateSecretGroup(file string, d string, name string) (models.SecretGroup, error) {
+func CreateSecretGroup(file string, password string, d string, name string) (models.SecretGroup, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.SecretGroup{}, fmt.Errorf("wrong password")
+	}
+	sg, err := createSecretGroup(file, d, name)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.SecretGroup{}, fmt.Errorf("error when encrypting file")
+	}
+	return sg, err
+}
+
+func createSecretGroup(file string, d string, name string) (models.SecretGroup, error) {
 	log.Println("Create secret group")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.SecretGroup{}, err
@@ -208,9 +311,22 @@ func CreateSecretGroup(file string, d string, name string) (models.SecretGroup, 
 	return group, nil
 }
 
-func GetSecretGroup(file string, d string, g string) (models.SecretGroup, error) {
+func GetSecretGroup(file string, password string, d string, g string) (models.SecretGroup, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.SecretGroup{}, fmt.Errorf("wrong password")
+	}
+	sg, err := getSecretGroup(file, d, g)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.SecretGroup{}, fmt.Errorf("error when encrypting file")
+	}
+	return sg, err
+}
+
+func getSecretGroup(file string, d string, g string) (models.SecretGroup, error) {
 	log.Println("Get secret group")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.SecretGroup{}, err
@@ -225,9 +341,22 @@ func GetSecretGroup(file string, d string, g string) (models.SecretGroup, error)
 	return models.SecretGroup{}, fmt.Errorf("secret group not found")
 }
 
-func UpdateSecretGroup(file string, d string, g string, name string) (models.SecretGroup, error) {
+func UpdateSecretGroup(file string, password string, d string, g string, name string) (models.SecretGroup, error) {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.SecretGroup{}, fmt.Errorf("wrong password")
+	}
+	sg, err := updateSecretGroup(file, d, g, name)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.SecretGroup{}, fmt.Errorf("error when encrypting file")
+	}
+	return sg, err
+}
+
+func updateSecretGroup(file string, d string, g string, name string) (models.SecretGroup, error) {
 	log.Println("Update secret group")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.SecretGroup{}, err
@@ -249,9 +378,27 @@ func UpdateSecretGroup(file string, d string, g string, name string) (models.Sec
 	return models.SecretGroup{}, fmt.Errorf("secret group not found")
 }
 
-func CreateSecret(file string, d string, g string, s models.Secret) (models.Secret, error) {
+func CreateSecret(file string, password string, d string, g string, s models.Secret) (models.Secret, error) {
+	ciphertext, err := security.EncryptText(password, string(s.Password))
+	if err != nil || ciphertext == nil {
+		return models.Secret{}, err
+	}
+	s.Password = ciphertext
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.Secret{}, fmt.Errorf("wrong password")
+	}
+	sct, err := createSecret(file, d, g, s)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.Secret{}, fmt.Errorf("error when encrypting file")
+	}
+	return sct, err
+}
+
+func createSecret(file string, d string, g string, s models.Secret) (models.Secret, error) {
 	log.Println("Create secret")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.Secret{}, err
@@ -268,9 +415,27 @@ func CreateSecret(file string, d string, g string, s models.Secret) (models.Secr
 	return models.Secret{}, fmt.Errorf("secret group not found")
 }
 
-func UpdateSecret(file string, d string, g string, id int, s models.Secret) (models.Secret, error) {
+func UpdateSecret(file string, password string, d string, g string, id int, s models.Secret) (models.Secret, error) {
+	ciphertext, err := security.EncryptText(password, string(s.Password))
+	if err != nil || ciphertext == nil {
+		return models.Secret{}, err
+	}
+	s.Password = ciphertext
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return models.Secret{}, fmt.Errorf("wrong password")
+	}
+	sct, err := updateSecret(file, d, g, id, s)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return models.Secret{}, fmt.Errorf("error when encrypting file")
+	}
+	return sct, err
+}
+
+func updateSecret(file string, d string, g string, id int, s models.Secret) (models.Secret, error) {
 	log.Println("Update secret")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return models.Secret{}, err
@@ -295,9 +460,22 @@ func UpdateSecret(file string, d string, g string, id int, s models.Secret) (mod
 	return models.Secret{}, fmt.Errorf("secret group not found")
 }
 
-func DeleteSecret(file string, d string, g string, id int) error {
+func DeleteSecret(file string, password string, d string, g string, id int) error {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return fmt.Errorf("wrong password")
+	}
+	err := deleteSecret(file, d, g, id)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return fmt.Errorf("error when encrypting file")
+	}
+	return err
+}
+
+func deleteSecret(file string, d string, g string, id int) error {
 	log.Println("Delete secret")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return err
@@ -317,9 +495,22 @@ func DeleteSecret(file string, d string, g string, id int) error {
 	return fmt.Errorf("secret group not found")
 }
 
-func DeleteSecretGroup(file string, d string, g string) error {
+func DeleteSecretGroup(file string, password string, d string, g string) error {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return fmt.Errorf("wrong password")
+	}
+	err := deleteSecretGroup(file, d, g)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return fmt.Errorf("error when encrypting file")
+	}
+	return err
+}
+
+func deleteSecretGroup(file string, d string, g string) error {
 	log.Println("Delete secret group")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return err
@@ -338,9 +529,22 @@ func DeleteSecretGroup(file string, d string, g string) error {
 	return fmt.Errorf("secret group not found")
 }
 
-func DeleteDatabase(file string, d string) error {
+func DeleteDatabase(file string, password string, d string) error {
+	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !decrypted {
+		return fmt.Errorf("wrong password")
+	}
+	err := deleteDatabase(file, d)
+	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
+	if !encrypted {
+		return fmt.Errorf("error when encrypting file")
+	}
+	return err
+}
+
+func deleteDatabase(file string, d string) error {
 	log.Println("Delete database")
-	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("%s.tmp", file)), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return err

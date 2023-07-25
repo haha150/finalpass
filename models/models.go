@@ -23,7 +23,7 @@ type Secret struct {
 	gorm.Model
 	ID            int
 	Username      string `gorm:"not null"`
-	Password      string `gorm:"not null"`
+	Password      []byte `gorm:"not null"`
 	Title         string
 	Description   string
 	URL           string
