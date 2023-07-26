@@ -12,7 +12,9 @@ import (
 	"password-manager/controller"
 	"password-manager/models"
 	"password-manager/security"
+	"password-manager/views"
 
+	"github.com/skip2/go-qrcode"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
@@ -40,15 +42,160 @@ func createMenu() *widgets.QMenuBar {
 	newDatabase.SetIcon(gui.NewQIcon5("icons/database.png"))
 	newDatabase.SetText("New database")
 	newDatabase.ConnectTriggered(func(bool) {
-		fmt.Println("New database")
+		db := newDb()
+		if db {
+			file := saveFile()
+			if file != "" && !controller.CheckFileExist(file) {
+				name := filepath.Base(file)
+				name2 := strings.TrimSuffix(name, filepath.Ext(name))
+				password := createPassword(file)
+				if password != "" {
+					init := controller.InitDB(file, password)
+					if init != nil {
+						log.Println(init)
+						showError("Failed to init database!")
+						return
+					}
+					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, name2, password)
+					if create != nil {
+						log.Println(create)
+						showError("Failed to create database!")
+						return
+					}
+					databases, err := controller.GetAllDatabases(file, password)
+					log.Println(databases)
+					if err != nil {
+						log.Println(err)
+						showError("Failed to get data!")
+						return
+					}
+					tree.Clear()
+					table.ClearContents()
+					table.SetRowCount(0)
+					for _, database := range databases {
+						parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
+						parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+						tree.AddTopLevelItem(parent)
+						for _, group := range database.SecretGroups {
+							child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
+							child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+							parent.AddChild(child)
+						}
+						parent.SetExpanded(true)
+					}
+					group.SetEnabled(true)
+					add.SetEnabled(true)
+					save.SetEnabled(true)
+					sub.SetEnabled(true)
+					masterPassword = password
+					fileDB = file
+					err2 := writeConfig(fileDB)
+					if err2 != nil {
+						log.Println(err2)
+						return
+					}
+				}
+			} else {
+				log.Println("File exists or cancelled")
+			}
+		}
 	})
 
 	openDatabase := widgets.NewQAction(nil)
 	openDatabase.SetIcon(gui.NewQIcon5("icons/open.svg"))
 	openDatabase.SetText("Open database")
 	openDatabase.ConnectTriggered(func(bool) {
-		fmt.Println("Open database")
+		file := loadFile()
+		if file != "" && controller.CheckFileExist(file) {
+			databases := []models.Database{}
+			var err error
+			password := ""
+			for i := 0; i < 3; i++ {
+				password = getPassword(file)
+				if password != "" {
+					databases, err = controller.GetAllDatabases(file, password)
+					if err != nil {
+						log.Println(err)
+						showError("Wrong password!")
+						if i == 2 {
+							return
+						}
+					} else {
+						break
+					}
+				} else {
+					return
+				}
+			}
+			tree.Clear()
+			table.ClearContents()
+			table.SetRowCount(0)
+			for _, database := range databases {
+				parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
+				parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+				tree.AddTopLevelItem(parent)
+				for i, group := range database.SecretGroups {
+					child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
+					child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					parent.AddChild(child)
+					if i == 0 {
+						tree.SetCurrentItem(child)
+						for _, secret := range group.Secrets {
+							row := table.RowCount()
+							table.InsertRow(row)
+							title := widgets.NewQTableWidgetItem2(secret.Title, 0)
+							title.SetIcon(gui.NewQIcon5("icons/key.png"))
+							table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
+							table.SetItem(row, 1, title)
+							table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
+							table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
+							table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
+							table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
+						}
+					}
+				}
+				parent.SetExpanded(true)
+			}
+			group.SetEnabled(true)
+			add.SetEnabled(true)
+			save.SetEnabled(true)
+			sub.SetEnabled(true)
+			masterPassword = password
+			fileDB = file
+			err2 := writeConfig(fileDB)
+			if err2 != nil {
+				log.Println(err2)
+				return
+			}
+		}
 	})
+
+	account := menu.AddMenu2("Account")
+
+	login := widgets.NewQAction(nil)
+	login.SetText("Login")
+	login.ConnectTriggered(func(bool) {
+		views.Login()
+	})
+
+	register := widgets.NewQAction(nil)
+	register.SetText("Register")
+	register.ConnectTriggered(func(bool) {
+		views.Register()
+	})
+
+	separator := widgets.NewQAction(nil)
+	separator.SetSeparator(true)
+
+	logout := widgets.NewQAction(nil)
+	logout.SetText("Logout")
+	logout.ConnectTriggered(func(bool) {
+	})
+
+	account.InsertAction(nil, login)
+	account.InsertAction(nil, register)
+	account.InsertAction(nil, separator)
+	account.InsertAction(nil, logout)
 
 	file.InsertAction(nil, newDatabase)
 	file.InsertAction(nil, openDatabase)
@@ -152,8 +299,6 @@ func createToolBar() *widgets.QToolBar {
 			} else {
 				log.Println("File exists or cancelled")
 			}
-		} else {
-			log.Println("Cancel")
 		}
 	})
 
@@ -223,8 +368,6 @@ func createToolBar() *widgets.QToolBar {
 				log.Println(err2)
 				return
 			}
-		} else {
-			log.Println("Cancel")
 		}
 	})
 
@@ -349,6 +492,13 @@ func createToolBar() *widgets.QToolBar {
 	save.SetToolTip("Save")
 	save.ConnectTriggered(func(bool) {
 		log.Println("Save")
+		// var png []byte
+		// png, err := qrcode.Encode("https://example.org", qrcode.Medium, 256)
+		err := qrcode.WriteFile("https://example.org", qrcode.Medium, 256, "qr.png")
+		if err != nil {
+			log.Println(err)
+		}
+
 	})
 	save.SetEnabled(false)
 
@@ -542,6 +692,7 @@ func createMain() *widgets.QWidget {
 	table.SetAutoScrollMargin(10)
 	table.SetColumnHidden(0, true)
 	table.VerticalHeader().SetVisible(false)
+	table.SetAlternatingRowColors(true)
 
 	table.ConnectCellDoubleClicked(func(row int, column int) {
 		id := table.Item(row, 0).Text()
@@ -655,7 +806,6 @@ func createMain() *widgets.QWidget {
 		}
 	})
 
-	// separator
 	separator := widgets.NewQAction(nil)
 	separator.SetSeparator(true)
 	menu.InsertAction(nil, separator)
@@ -1307,7 +1457,7 @@ func main() {
 	icon := gui.NewQIcon5("icons/pepega.png")
 	window.SetWindowIcon(icon)
 	window.SetMinimumSize2(800, 600)
-	window.SetWindowTitle("Password manager")
+	window.SetWindowTitle("Finalpass")
 	menu := createMenu()
 	window.SetMenuBar(menu)
 	tool := createToolBar()
