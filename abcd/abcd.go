@@ -1,8 +1,8 @@
 package main
 
 import (
+	"finalpass/security"
 	"log"
-	"password-manager/security"
 )
 
 func main() {

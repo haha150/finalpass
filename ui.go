@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"password-manager/controller"
-	"password-manager/models"
-	"password-manager/security"
-	"password-manager/views"
+	"finalpass/controller"
+	"finalpass/models"
+	"finalpass/security"
+	"finalpass/views"
 
 	"github.com/skip2/go-qrcode"
 	"github.com/therecipe/qt/core"

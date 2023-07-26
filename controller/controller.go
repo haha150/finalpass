@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"finalpass/models"
+	"finalpass/security"
 	"fmt"
 	"log"
 	"os"
-	"password-manager/models"
-	"password-manager/security"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

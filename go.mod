@@ -1,4 +1,4 @@
-module password-manager
+module finalpass
 
 go 1.20
 
