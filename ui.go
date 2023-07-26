@@ -39,7 +39,7 @@ func createMenu() *widgets.QMenuBar {
 	file := menu.AddMenu2("File")
 
 	newDatabase := widgets.NewQAction(nil)
-	newDatabase.SetIcon(gui.NewQIcon5("icons/database.png"))
+	newDatabase.SetIcon(gui.NewQIcon5("icons/database.svg"))
 	newDatabase.SetText("New database")
 	newDatabase.ConnectTriggered(func(bool) {
 		db := newDb()
@@ -74,11 +74,11 @@ func createMenu() *widgets.QMenuBar {
 					table.SetRowCount(0)
 					for _, database := range databases {
 						parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
-						parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+						parent.SetIcon(0, gui.NewQIcon5("icons/sub2.svg"))
 						tree.AddTopLevelItem(parent)
 						for _, group := range database.SecretGroups {
 							child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
-							child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+							child.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 							parent.AddChild(child)
 						}
 						parent.SetExpanded(true)
@@ -132,11 +132,11 @@ func createMenu() *widgets.QMenuBar {
 			table.SetRowCount(0)
 			for _, database := range databases {
 				parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
-				parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+				parent.SetIcon(0, gui.NewQIcon5("icons/sub2.svg"))
 				tree.AddTopLevelItem(parent)
 				for i, group := range database.SecretGroups {
 					child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
-					child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					child.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					parent.AddChild(child)
 					if i == 0 {
 						tree.SetCurrentItem(child)
@@ -144,7 +144,7 @@ func createMenu() *widgets.QMenuBar {
 							row := table.RowCount()
 							table.InsertRow(row)
 							title := widgets.NewQTableWidgetItem2(secret.Title, 0)
-							title.SetIcon(gui.NewQIcon5("icons/key.png"))
+							title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 							table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 							table.SetItem(row, 1, title)
 							table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
@@ -203,6 +203,7 @@ func createMenu() *widgets.QMenuBar {
 	help := menu.AddMenu2("Help")
 
 	about := widgets.NewQAction(nil)
+	about.SetIcon(gui.NewQIcon5("icons/about.svg"))
 	about.SetText("About")
 	about.ConnectTriggered(func(bool) {
 		widget := widgets.NewQWidget(nil, 0)
@@ -240,7 +241,7 @@ func createToolBar() *widgets.QToolBar {
 	tool.SetStyleSheet("background-color: #FFFFFF;")
 	tool.SetFixedHeight(50)
 	database := widgets.NewQAction(nil)
-	database.SetIcon(gui.NewQIcon5("icons/database.png"))
+	database.SetIcon(gui.NewQIcon5("icons/database.svg"))
 	database.SetToolTip("New database")
 	database.ConnectTriggered(func(bool) {
 		db := newDb()
@@ -275,11 +276,11 @@ func createToolBar() *widgets.QToolBar {
 					table.SetRowCount(0)
 					for _, database := range databases {
 						parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
-						parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+						parent.SetIcon(0, gui.NewQIcon5("icons/sub2.svg"))
 						tree.AddTopLevelItem(parent)
 						for _, group := range database.SecretGroups {
 							child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
-							child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+							child.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 							parent.AddChild(child)
 						}
 						parent.SetExpanded(true)
@@ -333,11 +334,11 @@ func createToolBar() *widgets.QToolBar {
 			table.SetRowCount(0)
 			for _, database := range databases {
 				parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
-				parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+				parent.SetIcon(0, gui.NewQIcon5("icons/sub2.svg"))
 				tree.AddTopLevelItem(parent)
 				for i, group := range database.SecretGroups {
 					child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
-					child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					child.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					parent.AddChild(child)
 					if i == 0 {
 						tree.SetCurrentItem(child)
@@ -345,7 +346,7 @@ func createToolBar() *widgets.QToolBar {
 							row := table.RowCount()
 							table.InsertRow(row)
 							title := widgets.NewQTableWidgetItem2(secret.Title, 0)
-							title.SetIcon(gui.NewQIcon5("icons/key.png"))
+							title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 							table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 							table.SetItem(row, 1, title)
 							table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
@@ -391,11 +392,11 @@ func createToolBar() *widgets.QToolBar {
 					return
 				}
 				parent := widgets.NewQTreeWidgetItem2([]string{db.Name}, 0)
-				parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+				parent.SetIcon(0, gui.NewQIcon5("icons/sub2.svg"))
 				tree.AddTopLevelItem(parent)
 				for _, group := range db.SecretGroups {
 					child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
-					child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					child.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					parent.AddChild(child)
 				}
 				parent.SetExpanded(true)
@@ -418,7 +419,7 @@ func createToolBar() *widgets.QToolBar {
 					return
 				} else {
 					g := widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0)
-					g.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					g.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					tree.CurrentItem().AddChild(g)
 				}
 			} else {
@@ -429,7 +430,7 @@ func createToolBar() *widgets.QToolBar {
 					return
 				} else {
 					g := widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0)
-					g.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+					g.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					tree.CurrentItem().Parent().AddChild(g)
 				}
 			}
@@ -438,7 +439,7 @@ func createToolBar() *widgets.QToolBar {
 	group.SetEnabled(false)
 
 	add = widgets.NewQAction(nil)
-	add.SetIcon(gui.NewQIcon5("icons/key.png"))
+	add.SetIcon(gui.NewQIcon5("icons/key.svg"))
 	add.SetToolTip("Add new secret")
 	add.ConnectTriggered(func(bool) {
 		secret := getSecret(models.Secret{})
@@ -456,7 +457,7 @@ func createToolBar() *widgets.QToolBar {
 					row := table.RowCount()
 					table.InsertRow(row)
 					title := widgets.NewQTableWidgetItem2(sct.Title, 0)
-					title.SetIcon(gui.NewQIcon5("icons/key.png"))
+					title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
@@ -475,7 +476,7 @@ func createToolBar() *widgets.QToolBar {
 				row := table.RowCount()
 				table.InsertRow(row)
 				title := widgets.NewQTableWidgetItem2(sct.Title, 0)
-				title.SetIcon(gui.NewQIcon5("icons/key.png"))
+				title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
@@ -554,7 +555,7 @@ func createSideMenu() *widgets.QWidget {
 					row := table.RowCount()
 					table.InsertRow(row)
 					title := widgets.NewQTableWidgetItem2(secret.Title, 0)
-					title.SetIcon(gui.NewQIcon5("icons/key.png"))
+					title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
@@ -574,7 +575,7 @@ func createSideMenu() *widgets.QWidget {
 				row := table.RowCount()
 				table.InsertRow(row)
 				title := widgets.NewQTableWidgetItem2(secret.Title, 0)
-				title.SetIcon(gui.NewQIcon5("icons/key.png"))
+				title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
@@ -721,7 +722,7 @@ func createMain() *widgets.QWidget {
 					return
 				} else {
 					title := widgets.NewQTableWidgetItem2(sct.Title, 0)
-					title.SetIcon(gui.NewQIcon5("icons/key.png"))
+					title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
@@ -748,7 +749,7 @@ func createMain() *widgets.QWidget {
 				return
 			} else {
 				title := widgets.NewQTableWidgetItem2(sct.Title, 0)
-				title.SetIcon(gui.NewQIcon5("icons/key.png"))
+				title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
@@ -762,7 +763,7 @@ func createMain() *widgets.QWidget {
 	menu := widgets.NewQMenu(nil)
 
 	copyUsername := menu.AddAction("Copy username")
-	copyUsername.SetIcon(gui.NewQIcon5("icons/username.png"))
+	copyUsername.SetIcon(gui.NewQIcon5("icons/username.svg"))
 	copyUsername.ConnectTriggered(func(bool) {
 		row := table.CurrentRow()
 		username := table.Item(row, 2).Text()
@@ -773,7 +774,7 @@ func createMain() *widgets.QWidget {
 	})
 
 	copyPassword := menu.AddAction("Copy password")
-	copyPassword.SetIcon(gui.NewQIcon5("icons/password.png"))
+	copyPassword.SetIcon(gui.NewQIcon5("icons/password.svg"))
 	copyPassword.ConnectTriggered(func(bool) {
 		row := table.CurrentRow()
 		id := table.Item(row, 0).Text()
@@ -840,7 +841,7 @@ func createMain() *widgets.QWidget {
 					return
 				} else {
 					title := widgets.NewQTableWidgetItem2(sct.Title, 0)
-					title.SetIcon(gui.NewQIcon5("icons/key.png"))
+					title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
@@ -867,7 +868,7 @@ func createMain() *widgets.QWidget {
 				return
 			} else {
 				title := widgets.NewQTableWidgetItem2(sct.Title, 0)
-				title.SetIcon(gui.NewQIcon5("icons/key.png"))
+				title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 				table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(sct.ID), 0))
 				table.SetItem(row, 1, title)
 				table.SetItem(row, 2, widgets.NewQTableWidgetItem2(sct.Username, 0))
@@ -980,7 +981,7 @@ func createPassword(file string) string {
 		if passwordField.EchoMode() == 2 {
 			passwordField.SetEchoMode(0)
 			repeatField.SetEchoMode(0)
-			sh = gui.NewQIcon5("icons/dontshow.png")
+			sh = gui.NewQIcon5("icons/dontshow.svg")
 			show.SetIcon(sh)
 		} else {
 			passwordField.SetEchoMode(2)
@@ -1231,7 +1232,7 @@ func getSecret(secret models.Secret) models.Secret {
 			repeatField.SetEchoMode(0)
 			repeatField.SetText(passwordField.Text())
 			repeatField.SetDisabled(true)
-			sh = gui.NewQIcon5("icons/dontshow.png")
+			sh = gui.NewQIcon5("icons/dontshow.svg")
 			show.SetIcon(sh)
 		} else {
 			passwordField.SetEchoMode(2)
@@ -1418,11 +1419,11 @@ func inits() {
 	}
 	for _, database := range databases {
 		parent := widgets.NewQTreeWidgetItem2([]string{database.Name}, 0)
-		parent.SetIcon(0, gui.NewQIcon5("icons/sub.svg"))
+		parent.SetIcon(0, gui.NewQIcon5("icons/sub2.svg"))
 		tree.AddTopLevelItem(parent)
 		for i, group := range database.SecretGroups {
 			child := widgets.NewQTreeWidgetItem2([]string{group.Name}, 0)
-			child.SetIcon(0, gui.NewQIcon5("icons/group.svg"))
+			child.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 			parent.AddChild(child)
 			if i == 0 {
 				tree.SetCurrentItem(child)
@@ -1430,7 +1431,7 @@ func inits() {
 					row := table.RowCount()
 					table.InsertRow(row)
 					title := widgets.NewQTableWidgetItem2(secret.Title, 0)
-					title.SetIcon(gui.NewQIcon5("icons/key.png"))
+					title.SetIcon(gui.NewQIcon5("icons/key.svg"))
 					table.SetItem(row, 0, widgets.NewQTableWidgetItem2(fmt.Sprint(secret.ID), 0))
 					table.SetItem(row, 1, title)
 					table.SetItem(row, 2, widgets.NewQTableWidgetItem2(secret.Username, 0))
@@ -1454,7 +1455,7 @@ func main() {
 	log.Println("Start application")
 	app := widgets.NewQApplication(len(os.Args), os.Args)
 	window := widgets.NewQMainWindow(nil, 0)
-	icon := gui.NewQIcon5("icons/pepega.png")
+	icon := gui.NewQIcon5("icons/main.svg")
 	window.SetWindowIcon(icon)
 	window.SetMinimumSize2(800, 600)
 	window.SetWindowTitle("Finalpass")
