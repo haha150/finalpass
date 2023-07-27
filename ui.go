@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"image/png"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,7 +17,8 @@ import (
 	"finalpass/security"
 	"finalpass/views"
 
-	"github.com/skip2/go-qrcode"
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
@@ -495,10 +499,27 @@ func createToolBar() *widgets.QToolBar {
 		log.Println("Save")
 		// var png []byte
 		// png, err := qrcode.Encode("https://example.org", qrcode.Medium, 256)
-		err := qrcode.WriteFile("https://example.org", qrcode.Medium, 256, "qr.png")
+		key, err := totp.Generate(totp.GenerateOpts{
+			Issuer:      "Finalpass",
+			AccountName: "admin@admin.com",
+			Algorithm:   otp.AlgorithmSHA512,
+		})
 		if err != nil {
 			log.Println(err)
 		}
+		var buf bytes.Buffer
+		img, err := key.Image(256, 256)
+		if err != nil {
+			panic(err)
+		}
+		png.Encode(&buf, img)
+		ioutil.WriteFile("qr.png", buf.Bytes(), 0644)
+		log.Println(key)
+		// err2 := qrcode.WriteFile(key.String(), qrcode.Medium, 256, "qr.png")
+		// if err2 != nil {
+		// 	log.Println(err2)
+		// }
+		// views.Mfa()
 
 	})
 	save.SetEnabled(false)

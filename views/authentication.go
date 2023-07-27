@@ -109,3 +109,35 @@ func Register() (string, string) {
 	}
 	return "", ""
 }
+
+func Mfa() string {
+	dialog := widgets.NewQDialog(nil, 0)
+	dialog.SetWindowTitle("MFA")
+	layout := widgets.NewQVBoxLayout2(dialog)
+	dialog.SetLayout(layout)
+	layout.AddWidget(widgets.NewQLabel2("Code", nil, 0), 0, core.Qt__AlignLeft)
+	code := widgets.NewQLineEdit(nil)
+	code.SetPlaceholderText("Code")
+	layout.AddWidget(code, 0, 0)
+	buttons := widgets.NewQDialogButtonBox(nil)
+	buttons.SetOrientation(core.Qt__Horizontal)
+	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
+	buttons.ConnectAccepted(func() {
+		if code.Text() != "" {
+			dialog.Accept()
+		} else {
+			showError("Code is missing!")
+		}
+	})
+	buttons.ConnectRejected(func() {
+		dialog.Reject()
+	})
+	layout.AddWidget(buttons, 0, core.Qt__AlignRight)
+	dialog.SetModal(true)
+	dialog.Show()
+	if dialog.Exec() == int(widgets.QDialog__Accepted) {
+
+		return code.Text()
+	}
+	return ""
+}
