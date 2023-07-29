@@ -55,7 +55,7 @@ func createMenu() *widgets.QMenuBar {
 						showError("Failed to init database!")
 						return
 					}
-					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, name2, password)
+					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, password, name2)
 					if create != nil {
 						log.Println(create)
 						showError("Failed to create database!")
@@ -260,7 +260,7 @@ func createToolBar() *widgets.QToolBar {
 						showError("Failed to init database!")
 						return
 					}
-					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, name2, password)
+					create := controller.CreateDatabaseAndSecretGroupIfNotExist(file, password, name2)
 					if create != nil {
 						log.Println(create)
 						showError("Failed to create database!")
