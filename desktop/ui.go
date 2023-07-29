@@ -1,24 +1,19 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"image/png"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"finalpass/controller"
-	"finalpass/models"
-	"finalpass/security"
-	"finalpass/views"
+	"desktop/controller"
+	"desktop/models"
+	"desktop/security"
+	"desktop/views"
 
-	"github.com/pquerna/otp"
-	"github.com/pquerna/otp/totp"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
@@ -99,8 +94,6 @@ func createMenu() *widgets.QMenuBar {
 						return
 					}
 				}
-			} else {
-				log.Println("File exists or cancelled")
 			}
 		}
 	})
@@ -179,6 +172,11 @@ func createMenu() *widgets.QMenuBar {
 	login := widgets.NewQAction(nil)
 	login.SetText("Login")
 	login.ConnectTriggered(func(bool) {
+		// err2 := qrcode.WriteFile(key.String(), qrcode.Medium, 256, "qr.png")
+		// if err2 != nil {
+		// 	log.Println(err2)
+		// }
+		// views.Mfa()
 		views.Login()
 	})
 
@@ -497,30 +495,6 @@ func createToolBar() *widgets.QToolBar {
 	save.SetToolTip("Save")
 	save.ConnectTriggered(func(bool) {
 		log.Println("Save")
-		// var png []byte
-		// png, err := qrcode.Encode("https://example.org", qrcode.Medium, 256)
-		key, err := totp.Generate(totp.GenerateOpts{
-			Issuer:      "Finalpass",
-			AccountName: "admin@admin.com",
-			Algorithm:   otp.AlgorithmSHA512,
-		})
-		if err != nil {
-			log.Println(err)
-		}
-		var buf bytes.Buffer
-		img, err := key.Image(256, 256)
-		if err != nil {
-			panic(err)
-		}
-		png.Encode(&buf, img)
-		ioutil.WriteFile("qr.png", buf.Bytes(), 0644)
-		log.Println(key)
-		// err2 := qrcode.WriteFile(key.String(), qrcode.Medium, 256, "qr.png")
-		// if err2 != nil {
-		// 	log.Println(err2)
-		// }
-		// views.Mfa()
-
 	})
 	save.SetEnabled(false)
 
@@ -1367,7 +1341,7 @@ func writeConfig(db string) error {
 		fmt.Fprintln(file, string(jdata))
 		return nil
 	}
-	file, err := os.Open("config.json")
+	file, err := os.OpenFile("config.json", os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Println(err)
 		return err

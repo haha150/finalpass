@@ -1,4 +1,4 @@
-# password-manager
+# finalpass
 
 ## Install Go
 
@@ -12,9 +12,9 @@ sudo mv go /usr/local/
 
 export PATH=$PATH:/usr/local/go/bin
 
-## Build & run
+## Build & run desktop app
 
-go mod init password-manager
+go mod init finalpass
 
 go get github.com/therecipe/qt/core
 
@@ -25,5 +25,25 @@ go get golang.org/x/crypto
 go get gorm.io/gorm
 
 go get gorm.io/driver/sqlite
+
+go run .
+
+## Build & run api
+
+go mid init api
+
+go get github.com/gin-gonic/gin
+
+go get github.com/dgrijalva/jwt-go
+
+go get github.com/pquerna/otp
+
+go get gorm.io/gorm
+
+go get github.com/gin-contrib/cors
+
+go get gorm.io/driver/sqlite
+
+go get github.com/google/uuid
 
 go run .

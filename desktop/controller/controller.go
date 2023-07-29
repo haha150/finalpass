@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"finalpass/models"
-	"finalpass/security"
+	"desktop/models"
+	"desktop/security"
 	"fmt"
 	"log"
 	"os"
@@ -40,11 +40,15 @@ func initDB(file string, password string) error {
 		log.Println(err)
 		return err
 	}
-
+	log.Println(file)
+	log.Println(password)
 	return nil
 }
 
 func CreateDatabaseAndSecretGroupIfNotExist(file string, password string, name string) error {
+	log.Println(file)
+	log.Println(password)
+	log.Println(name)
 	decrypted := security.DecryptFile(file, password, fmt.Sprintf("%s.tmp", file))
 	if !decrypted {
 		return fmt.Errorf("wrong password")
