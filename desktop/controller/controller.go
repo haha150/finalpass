@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"bytes"
 	"desktop/models"
 	"desktop/security"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"gorm.io/driver/sqlite"
@@ -35,6 +37,12 @@ func initDB(file string, password string) error {
 		log.Println(err)
 		return err
 	}
+	defer func() {
+		log.Println("Close database")
+		log.Println(file)
+		dbInstance, _ := db.DB()
+		_ = dbInstance.Close()
+	}()
 	err = db.AutoMigrate(&models.Database{}, &models.SecretGroup{}, &models.Secret{})
 	if err != nil {
 		log.Println(err)
@@ -63,6 +71,12 @@ func createDatabaseAndSecretGroupIfNotExist(file string, name string) error {
 		log.Println(err)
 		return err
 	}
+	defer func() {
+		log.Println("Close database")
+		log.Println(file)
+		dbInstance, _ := db.DB()
+		_ = dbInstance.Close()
+	}()
 	log.Printf("Database file created: %s", file)
 	var database models.Database
 	err2 := db.First(&database).Error
@@ -141,6 +155,12 @@ func getAllDatabases(file string) ([]models.Database, error) {
 		log.Println(err)
 		return nil, err
 	}
+	defer func() {
+		log.Println("Close database")
+		log.Println(file)
+		dbInstance, _ := db.DB()
+		_ = dbInstance.Close()
+	}()
 	var databases []models.Database
 	result := db.Preload("SecretGroups.Secrets").Find(&databases)
 	if result.Error != nil {
@@ -558,4 +578,18 @@ func deleteDatabase(file string, d string) error {
 	}
 	db.Delete(&database)
 	return nil
+}
+
+func SendRequest(url string, reqType string, body []byte, token string) (*http.Response, error) {
+	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(body))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", token)
+	}
+	client := &http.Client{}
+	return client.Do(req)
 }

@@ -31,7 +31,8 @@ var save *widgets.QAction = nil
 var table *widgets.QTableWidget = nil
 var masterPassword string = ""
 var fileDB string = ""
-var asterisk = "********************"
+var asterisk string = "********************"
+var url string = "https://auth.symeri.se:3000/"
 
 func createMenu() *widgets.QMenuBar {
 	menu := widgets.NewQMenuBar(nil)
