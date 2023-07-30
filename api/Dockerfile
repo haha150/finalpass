@@ -1,5 +1,7 @@
 FROM alpine
 RUN apk update && apk add --no-cache go
+RUN mkdir /app
+RUN mkdir /app/db
 WORKDIR /app
 ADD . /app
 ENV GIN_MODE=release
