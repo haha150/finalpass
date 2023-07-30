@@ -21,6 +21,12 @@ func CheckFileExist(file string) bool {
 	return false
 }
 
+func cleanup(db *gorm.DB) {
+	log.Println("Close database")
+	dbInstance, _ := db.DB()
+	_ = dbInstance.Close()
+}
+
 func InitDB(file string, password string) error {
 	err := initDB(file, password)
 	encrypted := security.EncryptFile(file, password, fmt.Sprintf("%s.tmp", file))
@@ -37,12 +43,7 @@ func initDB(file string, password string) error {
 		log.Println(err)
 		return err
 	}
-	defer func() {
-		log.Println("Close database")
-		log.Println(file)
-		dbInstance, _ := db.DB()
-		_ = dbInstance.Close()
-	}()
+	defer cleanup(db)
 	err = db.AutoMigrate(&models.Database{}, &models.SecretGroup{}, &models.Secret{})
 	if err != nil {
 		log.Println(err)
@@ -71,12 +72,7 @@ func createDatabaseAndSecretGroupIfNotExist(file string, name string) error {
 		log.Println(err)
 		return err
 	}
-	defer func() {
-		log.Println("Close database")
-		log.Println(file)
-		dbInstance, _ := db.DB()
-		_ = dbInstance.Close()
-	}()
+	defer cleanup(db)
 	log.Printf("Database file created: %s", file)
 	var database models.Database
 	err2 := db.First(&database).Error
@@ -116,6 +112,7 @@ func createSubDatabase(file string, name string) (models.Database, error) {
 		log.Println(err)
 		return models.Database{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	err2 := db.First(&database).Error
 	if err2 != nil && err2 == gorm.ErrRecordNotFound {
@@ -155,12 +152,7 @@ func getAllDatabases(file string) ([]models.Database, error) {
 		log.Println(err)
 		return nil, err
 	}
-	defer func() {
-		log.Println("Close database")
-		log.Println(file)
-		dbInstance, _ := db.DB()
-		_ = dbInstance.Close()
-	}()
+	defer cleanup(db)
 	var databases []models.Database
 	result := db.Preload("SecretGroups.Secrets").Find(&databases)
 	if result.Error != nil {
@@ -189,6 +181,7 @@ func getDatabase(file string, d string) (models.Database, error) {
 		log.Println(err)
 		return models.Database{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	result := db.Preload("SecretGroups").First(&database, "name = ?", d)
 	if result.Error != nil {
@@ -217,6 +210,7 @@ func updateDatabase(file string, d string, name string) (models.Database, error)
 		log.Println(err)
 		return models.Database{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	result := db.Find(&database, "name = ?", d)
 	if result.Error != nil {
@@ -247,6 +241,7 @@ func getSecrets(file string, d string, g string) ([]models.Secret, error) {
 		log.Println(err)
 		return nil, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -282,6 +277,7 @@ func getSecret(file string, d string, g string, s int) (models.Secret, error) {
 		log.Println(err)
 		return models.Secret{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -316,6 +312,7 @@ func createSecretGroup(file string, d string, name string) (models.SecretGroup, 
 		log.Println(err)
 		return models.SecretGroup{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -350,6 +347,7 @@ func getSecretGroup(file string, d string, g string) (models.SecretGroup, error)
 		log.Println(err)
 		return models.SecretGroup{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -380,6 +378,7 @@ func updateSecretGroup(file string, d string, g string, name string) (models.Sec
 		log.Println(err)
 		return models.SecretGroup{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -422,6 +421,7 @@ func createSecret(file string, d string, g string, s models.Secret) (models.Secr
 		log.Println(err)
 		return models.Secret{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups").First(&database, "name = ?", d)
 	for _, grp := range database.SecretGroups {
@@ -459,6 +459,7 @@ func updateSecret(file string, d string, g string, id int, s models.Secret) (mod
 		log.Println(err)
 		return models.Secret{}, err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -499,6 +500,7 @@ func deleteSecret(file string, d string, g string, id int) error {
 		log.Println(err)
 		return err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -534,6 +536,7 @@ func deleteSecretGroup(file string, d string, g string) error {
 		log.Println(err)
 		return err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
@@ -568,6 +571,7 @@ func deleteDatabase(file string, d string) error {
 		log.Println(err)
 		return err
 	}
+	defer cleanup(db)
 	var database models.Database
 	db.Preload("SecretGroups.Secrets").First(&database, "name = ?", d)
 	for _, group := range database.SecretGroups {
