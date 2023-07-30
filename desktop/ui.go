@@ -29,10 +29,14 @@ var sub *widgets.QAction = nil
 var add *widgets.QAction = nil
 var save *widgets.QAction = nil
 var table *widgets.QTableWidget = nil
+var login *widgets.QAction = nil
+var register *widgets.QAction = nil
+var settings *widgets.QAction = nil
+var logout *widgets.QAction = nil
 var masterPassword string = ""
 var fileDB string = ""
 var asterisk string = "********************"
-var url string = "https://auth.symeri.se:3000/"
+var user models.User = models.User{}
 
 func createMenu() *widgets.QMenuBar {
 	menu := widgets.NewQMenuBar(nil)
@@ -170,18 +174,26 @@ func createMenu() *widgets.QMenuBar {
 
 	account := menu.AddMenu2("Account")
 
-	login := widgets.NewQAction(nil)
+	login = widgets.NewQAction(nil)
+	login.SetIcon(gui.NewQIcon5("icons/login.svg"))
 	login.SetText("Login")
 	login.ConnectTriggered(func(bool) {
-		// err2 := qrcode.WriteFile(key.String(), qrcode.Medium, 256, "qr.png")
-		// if err2 != nil {
-		// 	log.Println(err2)
-		// }
-		// views.Mfa()
-		views.Login()
+		email, token, err := views.Login()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		user = models.User{Email: email, Token: token}
+		views.GetSettings(&user)
+		login.SetEnabled(false)
+		register.SetEnabled(false)
+		settings.SetEnabled(true)
+		logout.SetEnabled(true)
+		logout.SetText("Logout: " + email)
 	})
 
-	register := widgets.NewQAction(nil)
+	register = widgets.NewQAction(nil)
+	register.SetIcon(gui.NewQIcon5("icons/register.svg"))
 	register.SetText("Register")
 	register.ConnectTriggered(func(bool) {
 		views.Register()
@@ -190,14 +202,36 @@ func createMenu() *widgets.QMenuBar {
 	separator := widgets.NewQAction(nil)
 	separator.SetSeparator(true)
 
-	logout := widgets.NewQAction(nil)
+	settings = widgets.NewQAction(nil)
+	settings.SetIcon(gui.NewQIcon5("icons/settings.svg"))
+	settings.SetText("Settings")
+	settings.ConnectTriggered(func(bool) {
+		views.Settings(&user)
+	})
+	settings.SetEnabled(false)
+
+	separator2 := widgets.NewQAction(nil)
+	separator2.SetSeparator(true)
+
+	logout = widgets.NewQAction(nil)
+	logout.SetIcon(gui.NewQIcon5("icons/logout.svg"))
 	logout.SetText("Logout")
 	logout.ConnectTriggered(func(bool) {
+		user = models.User{}
+		logout.SetEnabled(false)
+		logout.SetText("Logout")
+		login.SetEnabled(true)
+		register.SetEnabled(true)
+		settings.SetEnabled(false)
+		showInfo("Logout successful!")
 	})
+	logout.SetEnabled(false)
 
 	account.InsertAction(nil, login)
 	account.InsertAction(nil, register)
 	account.InsertAction(nil, separator)
+	account.InsertAction(nil, settings)
+	account.InsertAction(nil, separator2)
 	account.InsertAction(nil, logout)
 
 	file.InsertAction(nil, newDatabase)
@@ -217,13 +251,13 @@ func createMenu() *widgets.QMenuBar {
 		layout := widgets.NewQVBoxLayout2(widget)
 		layout.SetContentsMargins(0, 0, 0, 0)
 		layout.SetSpacing(0)
-		label := widgets.NewQLabel2("Password Manager", nil, 0)
+		label := widgets.NewQLabel2("Finalpass", nil, 0)
 		label.SetAlignment(core.Qt__AlignCenter)
 		label.SetStyleSheet("font-size: 20px; font-weight: bold;")
 		label2 := widgets.NewQLabel2("Version 1.0.0", nil, 0)
 		label2.SetAlignment(core.Qt__AlignCenter)
 		label2.SetStyleSheet("font-size: 16px;")
-		label3 := widgets.NewQLabel2("Developed by: x", nil, 0)
+		label3 := widgets.NewQLabel2("Developed by: Ali Symeri", nil, 0)
 		label3.SetAlignment(core.Qt__AlignCenter)
 		label3.SetOpenExternalLinks(true)
 		label3.SetStyleSheet("font-size: 16px;")
@@ -1315,6 +1349,19 @@ func showError(message string) {
 	dialog.SetWindowTitle("Error")
 	dialog.SetText(message)
 	dialog.SetIcon(widgets.QMessageBox__Critical)
+	dialog.SetStandardButtons(widgets.QMessageBox__Ok)
+	dialog.SetDefaultButton2(widgets.QMessageBox__Ok)
+	dialog.SetEscapeButton2(widgets.QMessageBox__Ok)
+	dialog.SetModal(true)
+	dialog.Show()
+	dialog.Exec()
+}
+
+func showInfo(message string) {
+	dialog := widgets.NewQMessageBox(nil)
+	dialog.SetWindowTitle("Info")
+	dialog.SetText(message)
+	dialog.SetIcon(widgets.QMessageBox__Information)
 	dialog.SetStandardButtons(widgets.QMessageBox__Ok)
 	dialog.SetDefaultButton2(widgets.QMessageBox__Ok)
 	dialog.SetEscapeButton2(widgets.QMessageBox__Ok)

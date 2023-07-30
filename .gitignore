@@ -25,3 +25,4 @@ qtbox
 config.json
 *.key
 *.crt
+api.img

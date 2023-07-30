@@ -29,3 +29,10 @@ type Secret struct {
 	URL           string
 	SecretGroupID int
 }
+
+type User struct {
+	Email    string
+	Token    string
+	Verified bool
+	Totp     bool
+}

@@ -1,9 +1,23 @@
 package views
 
 import (
+	"desktop/controller"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+
+	"desktop/models"
+
+	"github.com/skip2/go-qrcode"
 	"github.com/therecipe/qt/core"
+	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
 )
+
+// var url string = "https://auth.symeri.se:3000"
+var url string = "https://localhost:3000"
 
 func showError(message string) {
 	dialog := widgets.NewQMessageBox(nil)
@@ -18,7 +32,20 @@ func showError(message string) {
 	dialog.Exec()
 }
 
-func Login() (string, string) {
+func showInfo(message string) {
+	dialog := widgets.NewQMessageBox(nil)
+	dialog.SetWindowTitle("Info")
+	dialog.SetText(message)
+	dialog.SetIcon(widgets.QMessageBox__Information)
+	dialog.SetStandardButtons(widgets.QMessageBox__Ok)
+	dialog.SetDefaultButton2(widgets.QMessageBox__Ok)
+	dialog.SetEscapeButton2(widgets.QMessageBox__Ok)
+	dialog.SetModal(true)
+	dialog.Show()
+	dialog.Exec()
+}
+
+func Login() (string, string, error) {
 	dialog := widgets.NewQDialog(nil, 0)
 	dialog.SetWindowTitle("Login")
 	layout := widgets.NewQVBoxLayout2(dialog)
@@ -32,6 +59,13 @@ func Login() (string, string) {
 	password.SetPlaceholderText("Password")
 	password.SetEchoMode(2)
 	layout.AddWidget(password, 0, 0)
+	totpLabel := widgets.NewQLabel2("Code", nil, 0)
+	totpLabel.SetVisible(false)
+	layout.AddWidget(totpLabel, 0, core.Qt__AlignLeft)
+	totp := widgets.NewQLineEdit(nil)
+	totp.SetPlaceholderText("Code")
+	totp.SetVisible(false)
+	layout.AddWidget(totp, 0, 0)
 	checkbox := widgets.NewQCheckBox(nil)
 	checkbox.SetText("Show password")
 	checkbox.ConnectStateChanged(func(state int) {
@@ -45,9 +79,43 @@ func Login() (string, string) {
 	buttons := widgets.NewQDialogButtonBox(nil)
 	buttons.SetOrientation(core.Qt__Horizontal)
 	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
+	var token string = ""
 	buttons.ConnectAccepted(func() {
 		if email.Text() != "" && password.Text() != "" {
-			dialog.Accept()
+			var data []byte
+			if totp.Text() != "" {
+				data = []byte(fmt.Sprintf(`{"username":"%s","password":"%s","totp":"%s"}`, email.Text(), password.Text(), totp.Text()))
+			} else {
+				data = []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, email.Text(), password.Text()))
+			}
+			res, err := controller.SendRequest(fmt.Sprintf("%s/login", url), "POST", data, "")
+			if err != nil {
+				showError(err.Error())
+			} else {
+				defer res.Body.Close()
+				body, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				var data map[string]interface{}
+				err2 := json.Unmarshal([]byte(body), &data)
+				if err2 != nil {
+					log.Println(err2)
+					return
+				}
+				if res.StatusCode == 200 {
+					showInfo(fmt.Sprintf("%s as %s.", data["message"].(string), email.Text()))
+					token = data["token"].(string)
+					dialog.Accept()
+				} else if res.StatusCode == 405 {
+					showInfo("Authenticator code required!")
+					totpLabel.SetVisible(true)
+					totp.SetVisible(true)
+				} else {
+					showError("Wrong email or password!")
+				}
+			}
 		} else {
 			showError("Email or password is missing!")
 		}
@@ -59,12 +127,12 @@ func Login() (string, string) {
 	dialog.SetModal(true)
 	dialog.Show()
 	if dialog.Exec() == int(widgets.QDialog__Accepted) {
-		return email.Text(), password.Text()
+		return email.Text(), token, nil
 	}
-	return "", ""
+	return "", "", fmt.Errorf("Login failed")
 }
 
-func Register() (string, string) {
+func Register() bool {
 	dialog := widgets.NewQDialog(nil, 0)
 	dialog.SetWindowTitle("Register")
 	layout := widgets.NewQVBoxLayout2(dialog)
@@ -77,14 +145,20 @@ func Register() (string, string) {
 	password := widgets.NewQLineEdit(nil)
 	password.SetPlaceholderText("Password")
 	password.SetEchoMode(2)
+	repeat := widgets.NewQLineEdit(nil)
+	repeat.SetPlaceholderText("Repeat")
+	repeat.SetEchoMode(2)
 	layout.AddWidget(password, 0, 0)
+	layout.AddWidget(repeat, 0, 0)
 	checkbox := widgets.NewQCheckBox(nil)
 	checkbox.SetText("Show password")
 	checkbox.ConnectStateChanged(func(state int) {
 		if state == int(core.Qt__Checked) {
 			password.SetEchoMode(0)
+			repeat.SetEchoMode(0)
 		} else {
 			password.SetEchoMode(2)
+			repeat.SetEchoMode(2)
 		}
 	})
 	layout.AddWidget(checkbox, 0, core.Qt__AlignLeft)
@@ -92,10 +166,33 @@ func Register() (string, string) {
 	buttons.SetOrientation(core.Qt__Horizontal)
 	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
 	buttons.ConnectAccepted(func() {
-		if email.Text() != "" && password.Text() != "" {
-			dialog.Accept()
+		if email.Text() != "" && password.Text() != "" && repeat.Text() != "" && password.Text() == repeat.Text() {
+			data := []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, email.Text(), password.Text()))
+			res, err := controller.SendRequest(fmt.Sprintf("%s/register", url), "POST", data, "")
+			if err != nil {
+				showError(err.Error())
+			} else {
+				defer res.Body.Close()
+				body, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				var data map[string]interface{}
+				err2 := json.Unmarshal([]byte(body), &data)
+				if err2 != nil {
+					log.Println(err2)
+					return
+				}
+				if res.StatusCode == 201 {
+					showInfo(fmt.Sprintf("Account created for %s. %s.", email.Text(), data["message"].(string)))
+					dialog.Accept()
+				} else {
+					showError("Wrong email or password!")
+				}
+			}
 		} else {
-			showError("Email or password is missing!")
+			showError("Email or password is missing or passwords dont match!")
 		}
 	})
 	buttons.ConnectRejected(func() {
@@ -104,40 +201,174 @@ func Register() (string, string) {
 	layout.AddWidget(buttons, 0, core.Qt__AlignRight)
 	dialog.SetModal(true)
 	dialog.Show()
-	if dialog.Exec() == int(widgets.QDialog__Accepted) {
-		return email.Text(), password.Text()
-	}
-	return "", ""
+	return dialog.Exec() == int(widgets.QDialog__Accepted)
 }
 
-func Mfa() string {
+func Settings(user *models.User) {
 	dialog := widgets.NewQDialog(nil, 0)
-	dialog.SetWindowTitle("MFA")
+	dialog.SetWindowTitle("Settings")
 	layout := widgets.NewQVBoxLayout2(dialog)
 	dialog.SetLayout(layout)
-	layout.AddWidget(widgets.NewQLabel2("Code", nil, 0), 0, core.Qt__AlignLeft)
-	code := widgets.NewQLineEdit(nil)
-	code.SetPlaceholderText("Code")
-	layout.AddWidget(code, 0, 0)
-	buttons := widgets.NewQDialogButtonBox(nil)
-	buttons.SetOrientation(core.Qt__Horizontal)
-	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
-	buttons.ConnectAccepted(func() {
-		if code.Text() != "" {
-			dialog.Accept()
+	layout.AddWidget(widgets.NewQLabel2("Change password", nil, 0), 0, core.Qt__AlignLeft)
+	current := widgets.NewQLineEdit(nil)
+	current.SetPlaceholderText("Current password")
+	current.SetEchoMode(2)
+	password := widgets.NewQLineEdit(nil)
+	password.SetPlaceholderText("New password")
+	password.SetEchoMode(2)
+	repeat := widgets.NewQLineEdit(nil)
+	repeat.SetPlaceholderText("Repeat new password")
+	repeat.SetEchoMode(2)
+	checkbox := widgets.NewQCheckBox(nil)
+	checkbox.SetText("Show password")
+	checkbox.ConnectStateChanged(func(state int) {
+		if state == int(core.Qt__Checked) {
+			current.SetEchoMode(0)
+			password.SetEchoMode(0)
+			repeat.SetEchoMode(0)
 		} else {
-			showError("Code is missing!")
+			current.SetEchoMode(2)
+			password.SetEchoMode(2)
+			repeat.SetEchoMode(2)
 		}
 	})
+	layout.AddWidget(current, 0, 0)
+	layout.AddWidget(password, 0, 0)
+	layout.AddWidget(repeat, 0, 0)
+	layout.AddWidget(checkbox, 0, core.Qt__AlignLeft)
+	passwordButton := widgets.NewQPushButton2("Change", nil)
+	passwordButton.ConnectClicked(func(checked bool) {
+		if password.Text() != repeat.Text() {
+			showError("Passwords dont match!")
+			return
+		}
+		data := []byte(fmt.Sprintf(`{"currentpassword":"%s","newpassword":"%s"}`, current.Text(), password.Text()))
+		res, err := controller.SendRequest(fmt.Sprintf("%s/user/password", url), "POST", data, user.Token)
+		if err != nil {
+			showError(err.Error())
+		} else {
+			defer res.Body.Close()
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			var data map[string]interface{}
+			err2 := json.Unmarshal([]byte(body), &data)
+			if err2 != nil {
+				log.Println(err2)
+				return
+			}
+			if res.StatusCode == 200 {
+				showInfo(data["message"].(string))
+			} else {
+				showError("Wrong password!")
+			}
+		}
+	})
+	layout.AddWidget(passwordButton, 0, core.Qt__AlignRight)
+	separator := widgets.NewQFrame(nil, 0)
+	separator.SetFrameShape(widgets.QFrame__HLine)
+	separator.SetFrameShadow(widgets.QFrame__Sunken)
+	layout.AddWidget(separator, 0, 0)
+	mfaCheckbox := widgets.NewQCheckBox(nil)
+	mfaCheckbox.SetText("Enable 2FA")
+	if user.Totp {
+		mfaCheckbox.SetCheckState(core.Qt__Checked)
+	} else {
+		mfaCheckbox.SetCheckState(core.Qt__Unchecked)
+	}
+	mfaCheckbox.ConnectStateChanged(func(state int) {
+		if state == int(core.Qt__Checked) {
+			res, err := controller.SendRequest(fmt.Sprintf("%s/otp/generate", url), "GET", nil, user.Token)
+			if err != nil {
+				showError(err.Error())
+			} else {
+				defer res.Body.Close()
+				body, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				var data map[string]interface{}
+				err2 := json.Unmarshal([]byte(body), &data)
+				if err2 != nil {
+					log.Println(err2)
+					return
+				}
+				if res.StatusCode == 200 {
+					qr := data["qr"].(string)
+					message := data["message"].(string)
+					dialog := widgets.NewQDialog(nil, 0)
+					dialog.SetWindowTitle("QR code")
+					layout := widgets.NewQVBoxLayout2(dialog)
+					layout.AddWidget(widgets.NewQLabel2("Scan the QR code below with your authenticator app", nil, 0), 0, core.Qt__AlignLeft)
+					dialog.SetLayout(layout)
+					err := qrcode.WriteFile(qr, qrcode.Medium, 256, "qr.png")
+					if err != nil {
+						log.Println(err)
+						return
+					}
+					pixmap := gui.NewQPixmap()
+					pixmap.Load("qr.png", "PNG", 0)
+					os.Remove("qr.png")
+					label := widgets.NewQLabel(nil, 0)
+					label.SetPixmap(pixmap)
+					layout.AddWidget(label, 0, core.Qt__AlignCenter)
+					label2 := widgets.NewQLabel2(message, nil, 0)
+					layout.AddWidget(label2, 0, core.Qt__AlignCenter)
+					buttons := widgets.NewQDialogButtonBox(nil)
+					buttons.SetOrientation(core.Qt__Horizontal)
+					buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok)
+					buttons.ConnectAccepted(func() {
+						dialog.Accept()
+					})
+					buttons.ConnectRejected(func() {
+						dialog.Reject()
+					})
+					layout.AddWidget(buttons, 0, core.Qt__AlignRight)
+					dialog.SetModal(true)
+					dialog.Show()
+					dialog.Exec()
+				}
+			}
+		}
+	})
+	layout.AddWidget(mfaCheckbox, 0, core.Qt__AlignLeft)
+	buttons := widgets.NewQDialogButtonBox(nil)
+	buttons.SetOrientation(core.Qt__Horizontal)
+	buttons.SetStandardButtons(widgets.QDialogButtonBox__Cancel)
 	buttons.ConnectRejected(func() {
 		dialog.Reject()
 	})
 	layout.AddWidget(buttons, 0, core.Qt__AlignRight)
 	dialog.SetModal(true)
 	dialog.Show()
-	if dialog.Exec() == int(widgets.QDialog__Accepted) {
+	dialog.Exec()
+}
 
-		return code.Text()
+func GetSettings(user *models.User) {
+	resp, err := controller.SendRequest(fmt.Sprintf("%s/user/settings", url), "GET", nil, user.Token)
+	if err != nil {
+		log.Println(err)
+		return
 	}
-	return ""
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	var data map[string]interface{}
+	err2 := json.Unmarshal([]byte(body), &data)
+	if err2 != nil {
+		log.Println(err2)
+		return
+	}
+	if resp.StatusCode == 200 {
+		verified := data["verified"].(bool)
+		totp := data["totp"].(bool)
+		user.Verified = verified
+		user.Totp = totp
+	}
 }

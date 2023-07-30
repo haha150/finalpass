@@ -2,12 +2,14 @@ package controller
 
 import (
 	"bytes"
+	"crypto/tls"
 	"desktop/models"
 	"desktop/security"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -584,6 +586,11 @@ func deleteDatabase(file string, d string) error {
 	return nil
 }
 
+func ValidateEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
 func SendRequest(url string, reqType string, body []byte, token string) (*http.Response, error) {
 	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(body))
 	if err != nil {
@@ -594,6 +601,26 @@ func SendRequest(url string, reqType string, body []byte, token string) (*http.R
 	if token != "" {
 		req.Header.Set("Authorization", token)
 	}
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 	return client.Do(req)
+}
+
+func SendAsyncRequest(url string, reqType string, body []byte, token string) (*http.Client, *http.Request, error) {
+	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(body))
+	if err != nil {
+		log.Println(err)
+		return nil, nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", token)
+	}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	return client, req, nil
 }

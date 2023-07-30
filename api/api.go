@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -59,6 +60,22 @@ func addUser(user User) error {
 	}
 
 	result := db.Create(&user)
+	if result.Error != nil {
+		log.Println(result.Error)
+		return result.Error
+	}
+
+	return nil
+}
+
+func updateUser(user User) error {
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	result := db.Save(&user)
 	if result.Error != nil {
 		log.Println(result.Error)
 		return result.Error
@@ -204,38 +221,52 @@ func loginHandler(c *gin.Context) {
 		return
 	}
 
+	if !validateEmail(data.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
 	user, err2 := getUser(data.Username)
 	if err2 != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
 	if !user.Verified {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
 	if user.Totp != "" {
-		valid := totp.Validate(data.Totp, user.Totp)
+		valid, err := totp.ValidateCustom(data.Totp, user.Totp, time.Now().UTC(), totp.ValidateOpts{
+			Period:    30,
+			Skew:      0,
+			Digits:    6,
+			Algorithm: otp.AlgorithmSHA512,
+		})
+		if err != nil {
+			c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Invalid credentials"})
+			return
+		}
 		if !valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+			c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Invalid credentials"})
 			return
 		}
 	}
 
 	match := CheckPasswordHash(data.Password, user.Password)
 	if !match {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
 	token, err3 := generateToken(data.Username)
 	if err3 != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{"message": "Logged in", "token": token})
 }
 
 func registerHandler(c *gin.Context) {
@@ -246,9 +277,14 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), 16)
+	if !validateEmail(data.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), 14)
 	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
@@ -272,16 +308,16 @@ func verifyHandler(c *gin.Context) {
 	}
 	user, err := getUserByCode(code)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "User already verified"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "User already verified"})
 		return
 	}
 	if user.Verified {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "User already verified"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "User already verified"})
 		return
 	}
 	err2 := setVerified(user.Username)
 	if err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "User already verified"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "User already verified"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User verified"})
@@ -291,30 +327,89 @@ func otpGenerateHandler(c *gin.Context) {
 	username := c.GetString("username")
 	user, err3 := getUser(username)
 	if err3 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to generate QR code"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to generate QR code"})
 		return
 	}
 	if !user.Verified {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to generate QR code"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to generate QR code"})
 		return
 	}
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      "Finalpass",
 		AccountName: username,
 		Algorithm:   otp.AlgorithmSHA512,
+		Digits:      6,
+		Period:      30,
 	})
 	if err != nil {
 		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to generate QR code"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to generate QR code"})
 		return
 	}
 	err2 := setTotp(username, key.Secret())
 	if err2 != nil {
 		log.Println(err2)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to generate QR code"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to generate QR code"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Generated QR code", "qr": key.String()})
+}
+
+func passwordHandler(c *gin.Context) {
+	username := c.GetString("username")
+	user, err3 := getUser(username)
+	if err3 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to change password"})
+		return
+	}
+	if !user.Verified {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to change password"})
+		return
+	}
+	var data struct {
+		CurrentPassword string `json:"currentpassword"`
+		NewPassword     string `json:"newpassword"`
+	}
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+	match := CheckPasswordHash(data.CurrentPassword, user.Password)
+	if !match {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
+		return
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.NewPassword), 14)
+	if err != nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	user.Password = string(hashedPassword)
+	err2 := updateUser(user)
+	if err2 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to change password"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Password changed"})
+}
+
+func settingsHandler(c *gin.Context) {
+	username := c.GetString("username")
+	user, err3 := getUser(username)
+	if err3 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	if !user.Verified {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User found", "verified": user.Verified, "totp": user.Totp != ""})
+}
+
+func validateEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
 }
 
 func main() {
@@ -324,9 +419,7 @@ func main() {
 		return
 	}
 
-	keyLength := 32
-
-	jwtKey, err := generateRandomKey(keyLength)
+	jwtKey, err := generateRandomKey(32)
 	if err != nil {
 		log.Println("Error generating jwtKey:", err)
 		return
@@ -347,7 +440,9 @@ func main() {
 	auth := router.Group("/")
 	auth.Use(authMiddleware())
 	{
+		auth.GET("/user/settings", settingsHandler)
 		auth.GET("/otp/generate", otpGenerateHandler)
+		auth.POST("/user/password", passwordHandler)
 	}
 
 	err2 := router.RunTLS(":3000", "certificate.crt", "private.key")
