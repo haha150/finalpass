@@ -34,6 +34,12 @@ go build -tags=release -ldflags="-s -w" -o finalpass
 
 ### Windows
 
+install choco
+
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+choco install mingw
+
 CGO_ENABLED=1 go build -tags=release -ldflags="-s -w" -o finalpass.exe
 
 ## Build & run api
