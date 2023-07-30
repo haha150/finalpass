@@ -28,6 +28,14 @@ go get gorm.io/driver/sqlite
 
 go run .
 
+### Linux
+
+go build -tags=release -ldflags="-s -w" -o finalpass
+
+### Windows
+
+CGO_ENABLED=1 go build -tags=release -ldflags="-s -w" -o finalpass.exe
+
 ## Build & run api
 
 go mid init api
