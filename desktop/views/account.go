@@ -4,7 +4,7 @@ import (
 	"desktop/controller"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -15,35 +15,6 @@ import (
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
 )
-
-// var url string = "https://auth.symeri.se:3000"
-var url string = "https://localhost:3000"
-
-func showError(message string) {
-	dialog := widgets.NewQMessageBox(nil)
-	dialog.SetWindowTitle("Error")
-	dialog.SetText(message)
-	dialog.SetIcon(widgets.QMessageBox__Critical)
-	dialog.SetStandardButtons(widgets.QMessageBox__Ok)
-	dialog.SetDefaultButton2(widgets.QMessageBox__Ok)
-	dialog.SetEscapeButton2(widgets.QMessageBox__Ok)
-	dialog.SetModal(true)
-	dialog.Show()
-	dialog.Exec()
-}
-
-func showInfo(message string) {
-	dialog := widgets.NewQMessageBox(nil)
-	dialog.SetWindowTitle("Info")
-	dialog.SetText(message)
-	dialog.SetIcon(widgets.QMessageBox__Information)
-	dialog.SetStandardButtons(widgets.QMessageBox__Ok)
-	dialog.SetDefaultButton2(widgets.QMessageBox__Ok)
-	dialog.SetEscapeButton2(widgets.QMessageBox__Ok)
-	dialog.SetModal(true)
-	dialog.Show()
-	dialog.Exec()
-}
 
 func Login() (string, string, error) {
 	dialog := widgets.NewQDialog(nil, 0)
@@ -88,12 +59,12 @@ func Login() (string, string, error) {
 			} else {
 				data = []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, email.Text(), password.Text()))
 			}
-			res, err := controller.SendRequest(fmt.Sprintf("%s/login", url), "POST", data, "")
+			res, err := controller.SendRequest(fmt.Sprintf("%s/login", models.Url), "POST", data, "")
 			if err != nil {
 				showError(err.Error())
 			} else {
 				defer res.Body.Close()
-				body, err := ioutil.ReadAll(res.Body)
+				body, err := io.ReadAll(res.Body)
 				if err != nil {
 					log.Println(err)
 					return
@@ -168,12 +139,12 @@ func Register() bool {
 	buttons.ConnectAccepted(func() {
 		if email.Text() != "" && password.Text() != "" && repeat.Text() != "" && password.Text() == repeat.Text() {
 			data := []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, email.Text(), password.Text()))
-			res, err := controller.SendRequest(fmt.Sprintf("%s/register", url), "POST", data, "")
+			res, err := controller.SendRequest(fmt.Sprintf("%s/register", models.Url), "POST", data, "")
 			if err != nil {
 				showError(err.Error())
 			} else {
 				defer res.Body.Close()
-				body, err := ioutil.ReadAll(res.Body)
+				body, err := io.ReadAll(res.Body)
 				if err != nil {
 					log.Println(err)
 					return
@@ -243,12 +214,12 @@ func Settings(user *models.User) {
 			return
 		}
 		data := []byte(fmt.Sprintf(`{"currentpassword":"%s","newpassword":"%s"}`, current.Text(), password.Text()))
-		res, err := controller.SendRequest(fmt.Sprintf("%s/user/password", url), "POST", data, user.Token)
+		res, err := controller.SendRequest(fmt.Sprintf("%s/user/password", models.Url), "POST", data, user.Token)
 		if err != nil {
 			showError(err.Error())
 		} else {
 			defer res.Body.Close()
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			if err != nil {
 				log.Println(err)
 				return
@@ -280,12 +251,12 @@ func Settings(user *models.User) {
 	}
 	mfaCheckbox.ConnectStateChanged(func(state int) {
 		if state == int(core.Qt__Checked) {
-			res, err := controller.SendRequest(fmt.Sprintf("%s/otp/generate", url), "GET", nil, user.Token)
+			res, err := controller.SendRequest(fmt.Sprintf("%s/otp/generate", models.Url), "GET", nil, user.Token)
 			if err != nil {
 				showError(err.Error())
 			} else {
 				defer res.Body.Close()
-				body, err := ioutil.ReadAll(res.Body)
+				body, err := io.ReadAll(res.Body)
 				if err != nil {
 					log.Println(err)
 					return
@@ -345,30 +316,4 @@ func Settings(user *models.User) {
 	dialog.SetModal(true)
 	dialog.Show()
 	dialog.Exec()
-}
-
-func GetSettings(user *models.User) {
-	resp, err := controller.SendRequest(fmt.Sprintf("%s/user/settings", url), "GET", nil, user.Token)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	var data map[string]interface{}
-	err2 := json.Unmarshal([]byte(body), &data)
-	if err2 != nil {
-		log.Println(err2)
-		return
-	}
-	if resp.StatusCode == 200 {
-		verified := data["verified"].(bool)
-		totp := data["totp"].(bool)
-		user.Verified = verified
-		user.Totp = totp
-	}
 }

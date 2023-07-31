@@ -4,6 +4,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// var Url string = "https://auth.symeri.se:3000"
+var Url string = "https://localhost:3000"
+
 type Database struct {
 	gorm.Model
 	ID           int
@@ -28,6 +31,10 @@ type Secret struct {
 	Description   string
 	URL           string
 	SecretGroupID int
+}
+
+type Configuration struct {
+	Database string
 }
 
 type User struct {

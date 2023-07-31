@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -379,8 +381,8 @@ func passwordHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
 		return
 	}
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.NewPassword), 14)
-	if err != nil {
+	hashedPassword, err4 := bcrypt.GenerateFromPassword([]byte(data.NewPassword), 14)
+	if err4 != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
@@ -405,6 +407,58 @@ func settingsHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User found", "verified": user.Verified, "totp": user.Totp != ""})
+}
+
+func saveHandler(c *gin.Context) {
+	content := c.GetHeader("Content-Type")
+	if !strings.Contains(content, "multipart/form-data; boundary=") {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+	username := c.GetString("username")
+	user, err3 := getUser(username)
+	if err3 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	if !user.Verified {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid request body"})
+		return
+	}
+	file := form.File["file"]
+	if len(file) != 1 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid request body"})
+		return
+	}
+	if err2 := c.SaveUploadedFile(file[0], "files/"+username+".db"); err2 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid request body"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Database saved"})
+}
+
+func syncHandler(c *gin.Context) {
+	username := c.GetString("username")
+	user, err3 := getUser(username)
+	if err3 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	if !user.Verified {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	file, err := os.ReadFile("files/" + username + ".db")
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to sync database"})
+		return
+	}
+	c.Data(http.StatusOK, "application/octet-stream", file)
 }
 
 func validateEmail(email string) bool {
@@ -443,6 +497,8 @@ func main() {
 		auth.GET("/user/settings", settingsHandler)
 		auth.GET("/otp/generate", otpGenerateHandler)
 		auth.POST("/user/password", passwordHandler)
+		auth.POST("/user/save", saveHandler)
+		auth.GET("/user/sync", syncHandler)
 	}
 
 	err2 := router.RunTLS(":3000", "certificate.crt", "private.key")

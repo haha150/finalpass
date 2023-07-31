@@ -5,10 +5,14 @@ import (
 	"crypto/tls"
 	"desktop/models"
 	"desktop/security"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"gorm.io/driver/sqlite"
@@ -591,6 +595,60 @@ func ValidateEmail(email string) bool {
 	return emailRegex.MatchString(email)
 }
 
+func WriteConfig(db string) error {
+	if _, err := os.Stat("config.json"); os.IsNotExist(err) {
+		file, err2 := os.Create("config.json")
+		if err2 != nil {
+			log.Println(err2)
+			return err2
+		}
+		defer file.Close()
+		config := models.Configuration{
+			Database: db,
+		}
+		jdata, err3 := json.Marshal(config)
+		if err3 != nil {
+			log.Println(err3)
+			return err3
+		}
+		fmt.Fprintln(file, string(jdata))
+		return nil
+	}
+	file, err := os.OpenFile("config.json", os.O_RDWR|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer file.Close()
+	config := models.Configuration{
+		Database: db,
+	}
+	jdata, err3 := json.Marshal(config)
+	if err3 != nil {
+		log.Println(err3)
+		return err3
+	}
+	fmt.Fprintln(file, string(jdata))
+	return nil
+}
+
+func ReadConfig() models.Configuration {
+	file, err := os.Open("config.json")
+	if err != nil {
+		log.Println(err)
+		return models.Configuration{}
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	config := models.Configuration{}
+	err = decoder.Decode(&config)
+	if err != nil {
+		log.Println(err)
+		return models.Configuration{}
+	}
+	return config
+}
+
 func SendRequest(url string, reqType string, body []byte, token string) (*http.Response, error) {
 	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(body))
 	if err != nil {
@@ -608,13 +666,13 @@ func SendRequest(url string, reqType string, body []byte, token string) (*http.R
 	return client.Do(req)
 }
 
-func SendAsyncRequest(url string, reqType string, body []byte, token string) (*http.Client, *http.Request, error) {
-	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(body))
+func SendRequest2(url string, reqType string, body *bytes.Buffer, cont string, token string) (*http.Response, error) {
+	req, err := http.NewRequest(reqType, url, body)
 	if err != nil {
 		log.Println(err)
-		return nil, nil, err
+		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", cont)
 	if token != "" {
 		req.Header.Set("Authorization", token)
 	}
@@ -622,5 +680,112 @@ func SendAsyncRequest(url string, reqType string, body []byte, token string) (*h
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
-	return client, req, nil
+	return client.Do(req)
+}
+
+func GetSettings(user *models.User) error {
+	resp, err := SendRequest(fmt.Sprintf("%s/user/settings", models.Url), "GET", nil, user.Token)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+	body, err3 := io.ReadAll(resp.Body)
+	if err3 != nil {
+		log.Println(err3)
+		return err3
+	}
+	var data map[string]interface{}
+	err2 := json.Unmarshal([]byte(body), &data)
+	if err2 != nil {
+		log.Println(err2)
+		return err2
+	}
+	if resp.StatusCode == 200 {
+		verified := data["verified"].(bool)
+		totp := data["totp"].(bool)
+		user.Verified = verified
+		user.Totp = totp
+	} else {
+		log.Println("Error when getting settings")
+		log.Println(data["message"].(string))
+		return fmt.Errorf("error when getting settings")
+	}
+	return nil
+}
+
+func Save(user *models.User, file string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer f.Close()
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err2 := writer.CreateFormFile("file", filepath.Base(file))
+	if err2 != nil {
+		log.Println(err2)
+		return err2
+	}
+	_, err3 := io.Copy(part, f)
+	if err3 != nil {
+		log.Println(err3)
+		return err3
+	}
+	err4 := writer.Close()
+	if err4 != nil {
+		log.Println(err4)
+		return err4
+	}
+	resp, err5 := SendRequest2(fmt.Sprintf("%s/user/save", models.Url), "POST", body, writer.FormDataContentType(), user.Token)
+	if err5 != nil {
+		log.Println(err5)
+		return err5
+	}
+	defer resp.Body.Close()
+	body2, err6 := io.ReadAll(resp.Body)
+	if err6 != nil {
+		log.Println(err6)
+		return err6
+	}
+	var data map[string]interface{}
+	err7 := json.Unmarshal([]byte(body2), &data)
+	if err7 != nil {
+		log.Println(err7)
+		return err7
+	}
+	if resp.StatusCode == 200 {
+		log.Println("Saved")
+	} else {
+		log.Println("Error when saving")
+		log.Println(data["message"].(string))
+		return fmt.Errorf("error when saving")
+	}
+	return nil
+}
+
+func Sync(user *models.User, file string) error {
+	resp, err := SendRequest(fmt.Sprintf("%s/user/sync", models.Url), "GET", nil, user.Token)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+	body, err2 := io.ReadAll(resp.Body)
+	if err2 != nil {
+		log.Println(err2)
+		return err2
+	}
+	if resp.StatusCode == 200 {
+		err3 := os.WriteFile(file, body, 0644)
+		if err3 != nil {
+			log.Println(err3)
+			return err3
+		}
+	} else {
+		log.Println("Error when syncing")
+		return fmt.Errorf("error when syncing")
+	}
+	return nil
 }
