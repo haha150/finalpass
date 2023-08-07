@@ -85,7 +85,6 @@ func CreateMenu() *widgets.QMenuBar {
 					}
 					group.SetEnabled(true)
 					add.SetEnabled(true)
-					save.SetEnabled(true)
 					sub.SetEnabled(true)
 					masterPassword = password
 					fileDB = file
@@ -156,7 +155,6 @@ func CreateMenu() *widgets.QMenuBar {
 			}
 			group.SetEnabled(true)
 			add.SetEnabled(true)
-			save.SetEnabled(true)
 			sub.SetEnabled(true)
 			masterPassword = password
 			fileDB = file
@@ -185,6 +183,9 @@ func CreateMenu() *widgets.QMenuBar {
 		register.SetEnabled(false)
 		settings.SetEnabled(true)
 		sync.SetEnabled(true)
+		save.SetEnabled(true)
+		sync.SetVisible(true)
+		save.SetVisible(true)
 		logout.SetEnabled(true)
 		logout.SetText("Logout: " + email)
 	})
@@ -221,6 +222,9 @@ func CreateMenu() *widgets.QMenuBar {
 		register.SetEnabled(true)
 		settings.SetEnabled(false)
 		sync.SetEnabled(false)
+		save.SetEnabled(false)
+		sync.SetVisible(false)
+		save.SetVisible(false)
 		showInfo("Logout successful!")
 	})
 	logout.SetEnabled(false)
@@ -322,7 +326,6 @@ func CreateToolBar() *widgets.QToolBar {
 					}
 					group.SetEnabled(true)
 					add.SetEnabled(true)
-					save.SetEnabled(true)
 					sub.SetEnabled(true)
 					masterPassword = password
 					fileDB = file
@@ -395,7 +398,6 @@ func CreateToolBar() *widgets.QToolBar {
 			}
 			group.SetEnabled(true)
 			add.SetEnabled(true)
-			save.SetEnabled(true)
 			sub.SetEnabled(true)
 			masterPassword = password
 			fileDB = file
@@ -435,6 +437,7 @@ func CreateToolBar() *widgets.QToolBar {
 					parent.AddChild(child)
 				}
 				parent.SetExpanded(true)
+				save.SetEnabled(true)
 			}
 		}
 	})
@@ -456,6 +459,7 @@ func CreateToolBar() *widgets.QToolBar {
 					g := widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0)
 					g.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					tree.CurrentItem().AddChild(g)
+					save.SetEnabled(true)
 				}
 			} else {
 				grp, err := controller.CreateSecretGroup(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), grp)
@@ -467,6 +471,7 @@ func CreateToolBar() *widgets.QToolBar {
 					g := widgets.NewQTreeWidgetItem2([]string{grp.Name}, 0)
 					g.SetIcon(0, gui.NewQIcon5("icons/group2.svg"))
 					tree.CurrentItem().Parent().AddChild(g)
+					save.SetEnabled(true)
 				}
 			}
 		}
@@ -499,6 +504,7 @@ func CreateToolBar() *widgets.QToolBar {
 					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
+					save.SetEnabled(true)
 				}
 			}
 		} else {
@@ -518,6 +524,7 @@ func CreateToolBar() *widgets.QToolBar {
 				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
+				save.SetEnabled(true)
 			}
 		}
 	})
@@ -527,17 +534,30 @@ func CreateToolBar() *widgets.QToolBar {
 	save.SetIcon(gui.NewQIcon5("icons/save.svg"))
 	save.SetToolTip("Save")
 	save.ConnectTriggered(func(bool) {
-		controller.Save(&user, fileDB)
+		err := controller.Save(&user, fileDB)
+		if err != nil {
+			log.Println(err)
+			showError("Failed to save!")
+			save.SetEnabled(false)
+			return
+		}
 	})
 	save.SetEnabled(false)
+	save.SetVisible(false)
 
 	sync = widgets.NewQAction(nil)
 	sync.SetIcon(gui.NewQIcon5("icons/refresh.svg"))
 	sync.SetToolTip("Sync")
 	sync.ConnectTriggered(func(bool) {
-		controller.Sync(&user, fileDB)
+		err := controller.Sync(&user, fileDB)
+		if err != nil {
+			log.Println(err)
+			showError("Failed to sync!")
+			return
+		}
 	})
 	sync.SetEnabled(false)
+	sync.SetVisible(false)
 
 	line := widgets.NewQFrame(nil, 0)
 	line.SetFrameShape(widgets.QFrame__VLine)
@@ -638,6 +658,7 @@ func CreateSideMenu() *widgets.QWidget {
 					return
 				} else {
 					tree.CurrentItem().SetText(0, d.Name)
+					save.SetEnabled(true)
 				}
 			}
 		} else {
@@ -650,6 +671,7 @@ func CreateSideMenu() *widgets.QWidget {
 					return
 				} else {
 					tree.CurrentItem().SetText(0, g.Name)
+					save.SetEnabled(true)
 				}
 			}
 		}
@@ -673,7 +695,7 @@ func CreateSideMenu() *widgets.QWidget {
 					table.SetRowCount(0)
 					group.SetEnabled(false)
 					add.SetEnabled(false)
-					save.SetEnabled(false)
+					save.SetEnabled(true)
 					sub.SetEnabled(false)
 				}
 			}
@@ -766,6 +788,7 @@ func CreateMain() *widgets.QWidget {
 					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
+					save.SetEnabled(true)
 				}
 			}
 		} else {
@@ -793,6 +816,7 @@ func CreateMain() *widgets.QWidget {
 				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
+				save.SetEnabled(true)
 			}
 		}
 	})
@@ -885,6 +909,7 @@ func CreateMain() *widgets.QWidget {
 					table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 					table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 					table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
+					save.SetEnabled(true)
 				}
 			}
 		} else {
@@ -912,6 +937,7 @@ func CreateMain() *widgets.QWidget {
 				table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 				table.SetItem(row, 4, widgets.NewQTableWidgetItem2(sct.URL, 0))
 				table.SetItem(row, 5, widgets.NewQTableWidgetItem2(sct.Description, 0))
+				save.SetEnabled(true)
 			}
 		}
 	})
@@ -936,6 +962,7 @@ func CreateMain() *widgets.QWidget {
 					return
 				}
 				table.RemoveRow(row)
+				save.SetEnabled(true)
 			}
 		} else {
 			err := controller.DeleteSecret(fileDB, masterPassword, tree.CurrentItem().Parent().Text(0), tree.CurrentItem().Text(0), integer)
@@ -945,6 +972,7 @@ func CreateMain() *widgets.QWidget {
 				return
 			}
 			table.RemoveRow(row)
+			save.SetEnabled(true)
 		}
 	})
 
@@ -1441,7 +1469,6 @@ func Inits() {
 	}
 	group.SetEnabled(true)
 	add.SetEnabled(true)
-	save.SetEnabled(true)
 	sub.SetEnabled(true)
 	masterPassword = password
 	fileDB = file
