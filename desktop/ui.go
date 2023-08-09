@@ -4,8 +4,10 @@ import (
 	"log"
 	"os"
 
+	"desktop/models"
 	"desktop/views"
 
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
@@ -13,6 +15,16 @@ import (
 
 func main() {
 	log.Println("Start application")
+	password := os.Getenv("PASSWORD")
+	if password == "" {
+		log.Fatal("PASSWORD environment variable is not set")
+	}
+	url := os.Getenv("URL")
+	if url == "" {
+		log.Fatal("URL environment variable is not set")
+	}
+	models.Url = url
+	models.Password = password
 	app := widgets.NewQApplication(len(os.Args), os.Args)
 	window := widgets.NewQMainWindow(nil, 0)
 	icon := gui.NewQIcon5("icons/main.svg")

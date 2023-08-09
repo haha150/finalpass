@@ -2,9 +2,11 @@ package controller
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"desktop/models"
 	"desktop/security"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -649,12 +652,51 @@ func ReadConfig() models.Configuration {
 	return config
 }
 
+func getChallenge(url string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	return client.Do(req)
+}
+
 func SendRequest(url string, reqType string, body []byte, token string) (*http.Response, error) {
+	var challenge string = ""
+	var hashString string = ""
+	if strings.Contains(url, "/login") || strings.Contains(url, "/register") {
+		re, er := getChallenge(url)
+		if er != nil {
+			log.Println(er)
+			return nil, er
+		}
+		defer re.Body.Close()
+		body, err := io.ReadAll(re.Body)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		var data map[string]interface{}
+		err2 := json.Unmarshal([]byte(body), &data)
+		if err2 != nil {
+			log.Println(err2)
+			return nil, err2
+		}
+		challenge = data["challenge"].(string)
+		hash := sha256.Sum256([]byte(challenge + models.Password))
+		hashString = hex.EncodeToString(hash[:])
+	}
 	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(body))
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	req.Header.Set("X-Auth-Challenge", challenge)
+	req.Header.Set("X-Auth-Hash", hashString)
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
 		req.Header.Set("Authorization", token)
@@ -788,4 +830,44 @@ func Sync(user *models.User, file string) error {
 		return fmt.Errorf("error when syncing")
 	}
 	return nil
+}
+
+func IsPasswordSecure(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+
+	hasUppercase := false
+	for _, character := range password {
+		if character >= 'A' && character <= 'Z' {
+			hasUppercase = true
+			break
+		}
+	}
+	if !hasUppercase {
+		return false
+	}
+
+	hasDigit := false
+	for _, character := range password {
+		if character >= '0' && character <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+	if !hasDigit {
+		return false
+	}
+
+	hasSpecialCharacter := false
+	for _, character := range password {
+		if (character >= '!' && character <= '/') ||
+			(character >= ':' && character <= '@') ||
+			(character >= '[' && character <= '`') ||
+			(character >= '{' && character <= '~') {
+			hasSpecialCharacter = true
+			break
+		}
+	}
+	return hasSpecialCharacter
 }

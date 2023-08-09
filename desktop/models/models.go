@@ -4,8 +4,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// var Url string = "https://auth.symeri.se:3000"
-var Url string = "https://localhost:3000"
+var Url string = ""
+var Password string = ""
 
 type Database struct {
 	gorm.Model

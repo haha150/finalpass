@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
+	"net/smtp"
 	"os"
 	"regexp"
 	"strings"
@@ -14,6 +19,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -21,8 +27,12 @@ import (
 	"gorm.io/gorm"
 )
 
-var file = "db/auth.db"
-var secretKey = []byte("secret")
+var file string = "db/auth.db"
+var secretKey []byte
+var password string = ""
+var email string = ""
+var emailPassword string = ""
+var url string = ""
 
 type User struct {
 	gorm.Model
@@ -30,8 +40,8 @@ type User struct {
 	Username string `json:"username" gorm:"unique"`
 	Password string `json:"password" gorm:"not null"`
 	Verified bool   `json:"verified" gorm:"default:false"`
-	Code     string `json:"code" gorm:"unique"`
-	Totp     string `json:"totp" gorm:"unique"`
+	Code     string `json:"code"`
+	Totp     string `json:"totp"`
 }
 
 type CustomClaims struct {
@@ -212,6 +222,31 @@ func authMiddleware() gin.HandlerFunc {
 }
 
 func loginHandler(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		challenge, err := generateRandomKey(32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"challenge": hex.EncodeToString(challenge)})
+		return
+	}
+
+	chall := c.GetHeader("X-Auth-Challenge")
+	hash := c.GetHeader("X-Auth-Hash")
+	if hash == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
+	expectedHash := sha256.Sum256([]byte(chall + password))
+	expectedHashString := hex.EncodeToString(expectedHash[:])
+
+	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
 	var data struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -272,6 +307,31 @@ func loginHandler(c *gin.Context) {
 }
 
 func registerHandler(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		challenge, err := generateRandomKey(32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"challenge": hex.EncodeToString(challenge)})
+		return
+	}
+
+	chall := c.GetHeader("X-Auth-Challenge")
+	hash := c.GetHeader("X-Auth-Hash")
+	if hash == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
+	expectedHash := sha256.Sum256([]byte(chall + password))
+	expectedHashString := hex.EncodeToString(expectedHash[:])
+
+	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
 	var data User
 
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -299,6 +359,7 @@ func registerHandler(c *gin.Context) {
 		c.JSON(http.StatusCreated, gin.H{"message": "Check your email for verification"})
 		return
 	}
+	sendEmail(data.Username, data.Code)
 	c.JSON(http.StatusCreated, gin.H{"message": "Check your email for verification"})
 }
 
@@ -466,7 +527,42 @@ func validateEmail(email string) bool {
 	return emailRegex.MatchString(email)
 }
 
+func sendEmail(email string, code string) {
+	from := email
+	password := emailPassword
+	to := []string{
+		email,
+	}
+	smtpHost := "smtp.gmail.com"
+	smtpPort := "587"
+	message := []byte(fmt.Sprintf("Subject: Finalpass Email Verification\n\nThis email was sent by Finalpass\n\nClick this link to verify your account:\n\n%s/verify?code=%s\n\nIf you did not request this, please ignore this email.", url, code))
+	auth := smtp.PlainAuth("", from, password, smtpHost)
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, message)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("Email Sent Successfully!")
+}
+
 func main() {
+	password = os.Getenv("PASSWORD")
+	if password == "" {
+		log.Fatal("PASSWORD environment variable is not set")
+	}
+	email = os.Getenv("EMAIL")
+	if email == "" {
+		log.Fatal("EMAIL environment variable is not set")
+	}
+	emailPassword = os.Getenv("EMAIL_PASSWORD")
+	if emailPassword == "" {
+		log.Fatal("EMAIL_PASSWORD environment variable is not set")
+	}
+	url = os.Getenv("URL")
+	if url == "" {
+		log.Fatal("URL environment variable is not set")
+	}
+
 	init := initDB()
 	if init != nil {
 		log.Println("Error initializing database:", init)
@@ -488,7 +584,9 @@ func main() {
 	router.Use(cors.Default())
 
 	router.POST("/login", loginHandler)
+	router.GET("/login", loginHandler)
 	router.POST("/register", registerHandler)
+	router.GET("/register", registerHandler)
 	router.GET("/verify", verifyHandler)
 
 	auth := router.Group("/")

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>Finalpass</Name>
+    <Version>1.0.0</Version>
+    <Title>Finalpass Installer</Title>
+    <Publisher>Ali Symeri</Publisher>
+    <StartMenuDir>Finalpass</StartMenuDir>
+    <TargetDir>@HomeDir@/Finalpass</TargetDir>
+</Installer>

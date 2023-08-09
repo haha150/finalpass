@@ -26,3 +26,4 @@ config.json
 *.key
 *.crt
 api.img
+.env

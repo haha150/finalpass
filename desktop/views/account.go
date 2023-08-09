@@ -108,6 +108,8 @@ func Register() bool {
 	dialog.SetWindowTitle("Register")
 	layout := widgets.NewQVBoxLayout2(dialog)
 	dialog.SetLayout(layout)
+	label := widgets.NewQLabel2("Password must contain at least:\n- 8 characters\n- 1 uppercase character\n- 1 lowercase character\n- 1 number\n- 1 special character", nil, 0)
+	layout.AddWidget(label, 0, core.Qt__AlignLeft)
 	layout.AddWidget(widgets.NewQLabel2("Email", nil, 0), 0, core.Qt__AlignLeft)
 	email := widgets.NewQLineEdit(nil)
 	email.SetPlaceholderText("Email")
@@ -119,6 +121,7 @@ func Register() bool {
 	repeat := widgets.NewQLineEdit(nil)
 	repeat.SetPlaceholderText("Repeat")
 	repeat.SetEchoMode(2)
+
 	layout.AddWidget(password, 0, 0)
 	layout.AddWidget(repeat, 0, 0)
 	checkbox := widgets.NewQCheckBox(nil)
@@ -132,12 +135,48 @@ func Register() bool {
 			repeat.SetEchoMode(2)
 		}
 	})
-	layout.AddWidget(checkbox, 0, core.Qt__AlignLeft)
+	layout.AddWidget(checkbox, 0, core.Qt__AlignRight)
+
+	label2 := widgets.NewQLabel2("Password requirements not met!", nil, 0)
+	label2.SetStyleSheet("color: red")
+	label2.SetVisible(false)
+	layout.AddWidget(label2, 0, core.Qt__AlignLeft)
+
+	password.ConnectTextChanged(func(text string) {
+		if controller.IsPasswordSecure(password.Text()) {
+			label2.SetVisible(false)
+		} else {
+			label2.SetVisible(true)
+		}
+		if password.Text() != repeat.Text() {
+			password.SetStyleSheet("border: 1px solid red")
+			repeat.SetStyleSheet("border: 1px solid red")
+		} else {
+			password.SetStyleSheet("border: 1px solid green")
+			repeat.SetStyleSheet("border: 1px solid green")
+		}
+	})
+
+	repeat.ConnectTextChanged(func(text string) {
+		if controller.IsPasswordSecure(repeat.Text()) {
+			label2.SetVisible(false)
+		} else {
+			label2.SetVisible(true)
+		}
+		if password.Text() != repeat.Text() {
+			password.SetStyleSheet("border: 1px solid red")
+			repeat.SetStyleSheet("border: 1px solid red")
+		} else {
+			password.SetStyleSheet("border: 1px solid green")
+			repeat.SetStyleSheet("border: 1px solid green")
+		}
+	})
+
 	buttons := widgets.NewQDialogButtonBox(nil)
 	buttons.SetOrientation(core.Qt__Horizontal)
 	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
 	buttons.ConnectAccepted(func() {
-		if email.Text() != "" && password.Text() != "" && repeat.Text() != "" && password.Text() == repeat.Text() {
+		if email.Text() != "" && password.Text() != "" && repeat.Text() != "" && password.Text() == repeat.Text() && controller.IsPasswordSecure(password.Text()) {
 			data := []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, email.Text(), password.Text()))
 			res, err := controller.SendRequest(fmt.Sprintf("%s/register", models.Url), "POST", data, "")
 			if err != nil {
