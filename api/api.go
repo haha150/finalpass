@@ -19,7 +19,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	_ "github.com/joho/godotenv/autoload"
+	_ "github.com/joho/godotenv"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -546,6 +546,10 @@ func sendEmail(email string, code string) {
 }
 
 func main() {
+	err := godotenv.Load("config.env")
+	if err != nil {
+		log.Fatal("Error loading config.env file")
+	}
 	password = os.Getenv("PASSWORD")
 	if password == "" {
 		log.Fatal("PASSWORD environment variable is not set")

@@ -7,7 +7,7 @@ import (
 	"desktop/models"
 	"desktop/views"
 
-	_ "github.com/joho/godotenv/autoload"
+	"github.com/joho/godotenv"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
@@ -15,6 +15,10 @@ import (
 
 func main() {
 	log.Println("Start application")
+	err := godotenv.Load("config.env")
+	if err != nil {
+		log.Fatal("Error loading config.env file")
+	}
 	password := os.Getenv("PASSWORD")
 	if password == "" {
 		log.Fatal("PASSWORD environment variable is not set")
