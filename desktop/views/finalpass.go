@@ -127,6 +127,15 @@ func CreateMenu() *widgets.QMenuBar {
 
 	help := menu.AddMenu2("Help")
 
+	update := widgets.NewQAction(nil)
+	update.SetIcon(gui.NewQIcon5("icons/refresh.svg"))
+	update.SetText("Check for updates")
+	update.ConnectTriggered(func(bool) {
+		showInfo("Coming soon!")
+	})
+
+	help.InsertAction(nil, update)
+
 	about := widgets.NewQAction(nil)
 	about.SetIcon(gui.NewQIcon5("icons/about.svg"))
 	about.SetText("About")
@@ -462,6 +471,7 @@ func CreateMain() *widgets.QWidget {
 	table.SetColumnHidden(0, true)
 	table.VerticalHeader().SetVisible(false)
 	table.SetAlternatingRowColors(true)
+	table.SetStyleSheet("alternate-background-color: #d1dce0;")
 
 	table.ConnectCellDoubleClicked(func(row int, column int) {
 		id := table.Item(row, 0).Text()
