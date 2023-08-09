@@ -27,3 +27,5 @@ config.json
 *.crt
 api.img
 .env
+installer/packages/se.symeri.finalpass/data/*
+installer/dist/*
