@@ -49,21 +49,26 @@ func CreateMenu() *widgets.QMenuBar {
 	openDatabase.SetIcon(gui.NewQIcon5("icons/open.svg"))
 	openDatabase.SetText("Open database")
 	openDatabase.ConnectTriggered(func(bool) {
-		openDb()
+		openDb("")
 	})
 
 	account := menu.AddMenu2("Account")
+
+	email := widgets.NewQAction(nil)
+	email.SetIcon(gui.NewQIcon5("icons/username.svg"))
+	email.SetEnabled(false)
+	email.SetVisible(false)
 
 	login = widgets.NewQAction(nil)
 	login.SetIcon(gui.NewQIcon5("icons/login.svg"))
 	login.SetText("Login")
 	login.ConnectTriggered(func(bool) {
-		email, token, err := Login()
+		emai, token, err := Login()
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		user = models.User{Email: email, Token: token}
+		user = models.User{Email: emai, Token: token}
 		controller.GetSettings(&user)
 		login.SetEnabled(false)
 		register.SetEnabled(false)
@@ -73,7 +78,22 @@ func CreateMenu() *widgets.QMenuBar {
 		sync.SetVisible(true)
 		save.SetVisible(true)
 		logout.SetEnabled(true)
-		logout.SetText("Logout: " + email)
+		logout.SetText("Logout: " + emai)
+		email.SetText(emai)
+		email.SetVisible(true)
+		sure := areYouSure("Do you want to sync to your remote database, if you have one?\n\nYou can always sync later!")
+		if sure {
+			file := saveFile()
+			if file != "" {
+				err := controller.Sync(&user, file)
+				if err != nil {
+					log.Println(err)
+					showError("You dont have a remote database yet!")
+					return
+				}
+				openDb(file)
+			}
+		}
 	})
 
 	register = widgets.NewQAction(nil)
@@ -111,10 +131,15 @@ func CreateMenu() *widgets.QMenuBar {
 		save.SetEnabled(false)
 		sync.SetVisible(false)
 		save.SetVisible(false)
+		email.SetVisible(false)
+		tree.Clear()
+		table.ClearContents()
+		table.SetRowCount(0)
 		showInfo("Logout successful!")
 	})
 	logout.SetEnabled(false)
 
+	account.InsertAction(nil, email)
 	account.InsertAction(nil, login)
 	account.InsertAction(nil, register)
 	account.InsertAction(nil, separator)
@@ -185,7 +210,7 @@ func CreateToolBar() *widgets.QToolBar {
 	open.SetIcon(gui.NewQIcon5("icons/open.svg"))
 	open.SetToolTip("Open database")
 	open.ConnectTriggered(func(bool) {
-		openDb()
+		openDb("")
 	})
 
 	sub = widgets.NewQAction(nil)
@@ -269,6 +294,10 @@ func CreateToolBar() *widgets.QToolBar {
 	save.SetIcon(gui.NewQIcon5("icons/save.svg"))
 	save.SetToolTip("Save")
 	save.ConnectTriggered(func(bool) {
+		sure := areYouSure("Are you sure you want to save?\n\nThis will overwrite the remote database with this current one!")
+		if !sure {
+			return
+		}
 		err := controller.Save(&user, fileDB)
 		if err != nil {
 			log.Println(err)
@@ -285,11 +314,29 @@ func CreateToolBar() *widgets.QToolBar {
 	sync.SetIcon(gui.NewQIcon5("icons/refresh.svg"))
 	sync.SetToolTip("Sync")
 	sync.ConnectTriggered(func(bool) {
-		err := controller.Sync(&user, fileDB)
-		if err != nil {
-			log.Println(err)
-			showError("Failed to sync!")
-			return
+		if fileDB == "" {
+			file := saveFile()
+			if file != "" {
+				err := controller.Sync(&user, file)
+				if err != nil {
+					log.Println(err)
+					showError("Failed to sync!")
+					return
+				}
+				openDb(file)
+			}
+		} else {
+			sure := areYouSure("Are you sure you want to sync?\n\nThis will overwrite your current database!")
+			if !sure {
+				return
+			}
+			err := controller.Sync(&user, fileDB)
+			if err != nil {
+				log.Println(err)
+				showError("Failed to sync!")
+				return
+			}
+			openDb(fileDB)
 		}
 	})
 	sync.SetEnabled(false)
@@ -677,6 +724,11 @@ func CreateMain() *widgets.QWidget {
 
 	table.ConnectCustomContextMenuRequested(func(pos *core.QPoint) {
 		if table.RowCount() == 0 {
+			return
+		}
+		row := table.CurrentRow()
+		if row < 0 {
+			table.ClearSelection()
 			return
 		}
 		menu.Exec2(table.MapToGlobal(pos), nil)
@@ -1111,8 +1163,26 @@ func showInfo(message string) {
 	dialog.Exec()
 }
 
-func openDb() {
-	file := loadFile()
+func areYouSure(message string) bool {
+	dialog := widgets.NewQMessageBox(nil)
+	dialog.SetWindowTitle("Are you sure?")
+	dialog.SetText(message)
+	dialog.SetIcon(widgets.QMessageBox__Warning)
+	dialog.SetStandardButtons(widgets.QMessageBox__Yes | widgets.QMessageBox__No)
+	dialog.SetDefaultButton2(widgets.QMessageBox__No)
+	dialog.SetEscapeButton2(widgets.QMessageBox__No)
+	dialog.SetModal(true)
+	dialog.Show()
+	return dialog.Exec() == int(widgets.QMessageBox__Yes)
+}
+
+func openDb(f string) {
+	file := ""
+	if f != "" {
+		file = f
+	} else {
+		file = loadFile()
+	}
 	if file != "" && controller.CheckFileExist(file) {
 		databases := []models.Database{}
 		var err error
