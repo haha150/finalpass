@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function Database() {
+export default function Settings() {
     return (
         <View style={styles.container}>
-            <Text>Database</Text>
+            <Text>Settings</Text>
         </View>
     )
 }
