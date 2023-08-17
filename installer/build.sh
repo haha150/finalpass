@@ -8,5 +8,6 @@ cp ../desktop/config.env packages/se.symeri.finalpass/data/
 cp ../desktop/qtbox packages/se.symeri.finalpass/data/
 cp -r ../desktop/icons packages/se.symeri.finalpass/data/
 /home/ubuntu/Qt/QtIFW-4.6.0/bin/binarycreator -f -c config/config.xml -p packages/ -t /home/ubuntu/Qt/QtIFW-4.6.0/bin/installerbase finalpass-installer
+mkdir dist
 mv finalpass-installer dist/
 rm -r packages/se.symeri.finalpass/data/*
