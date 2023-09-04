@@ -29,7 +29,8 @@ import (
 
 var file string = "db/auth.db"
 var secretKey []byte
-var password string = ""
+var passwordDesktop string = ""
+var passwordIOS string = ""
 var email string = ""
 var emailPassword string = ""
 var url string = ""
@@ -239,10 +240,12 @@ func loginHandler(c *gin.Context) {
 		return
 	}
 
-	expectedHash := sha256.Sum256([]byte(chall + password))
+	expectedHash := sha256.Sum256([]byte(chall + passwordDesktop))
 	expectedHashString := hex.EncodeToString(expectedHash[:])
+	expectedHash2 := sha256.Sum256([]byte(chall + passwordIOS))
+	expectedHashString2 := hex.EncodeToString(expectedHash2[:])
 
-	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) {
+	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) || !bytes.Equal([]byte(expectedHashString2), []byte(hash)) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
@@ -326,10 +329,12 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	expectedHash := sha256.Sum256([]byte(chall + password))
+	expectedHash := sha256.Sum256([]byte(chall + passwordDesktop))
 	expectedHashString := hex.EncodeToString(expectedHash[:])
+	expectedHash2 := sha256.Sum256([]byte(chall + passwordIOS))
+	expectedHashString2 := hex.EncodeToString(expectedHash2[:])
 
-	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) {
+	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) || !bytes.Equal([]byte(expectedHashString2), []byte(hash)) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
@@ -618,9 +623,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading config.env file")
 	}
-	password = os.Getenv("PASSWORD")
-	if password == "" {
-		log.Fatal("PASSWORD environment variable is not set")
+	passwordDesktop = os.Getenv("PASSWORD_DESKTOP")
+	if passwordDesktop == "" {
+		log.Fatal("PASSWORD_DESKTOP environment variable is not set")
+	}
+	passwordIOS = os.Getenv("PASSWORD_IOS")
+	if passwordIOS == "" {
+		log.Fatal("PASSWORD_IOS environment variable is not set")
 	}
 	email = os.Getenv("EMAIL")
 	if email == "" {
