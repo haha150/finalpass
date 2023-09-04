@@ -290,7 +290,7 @@ func Settings(user *models.User) {
 	}
 	mfaCheckbox.ConnectStateChanged(func(state int) {
 		if state == int(core.Qt__Checked) {
-			res, err := controller.SendRequest(fmt.Sprintf("%s/otp/generate", models.Url), "GET", nil, user.Token)
+			res, err := controller.SendRequest(fmt.Sprintf("%s/otp/generate", models.Url), "POST", nil, user.Token)
 			if err != nil {
 				showError(err.Error())
 			} else {
@@ -340,6 +340,31 @@ func Settings(user *models.User) {
 					dialog.SetModal(true)
 					dialog.Show()
 					dialog.Exec()
+				} else {
+					showError("Failed to enable 2FA!")
+				}
+			}
+		} else {
+			res, err := controller.SendRequest(fmt.Sprintf("%s/otp/remove", models.Url), "POST", nil, user.Token)
+			if err != nil {
+				showError(err.Error())
+			} else {
+				defer res.Body.Close()
+				body, err := io.ReadAll(res.Body)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				var data map[string]interface{}
+				err2 := json.Unmarshal([]byte(body), &data)
+				if err2 != nil {
+					log.Println(err2)
+					return
+				}
+				if res.StatusCode == 200 {
+					showInfo(data["message"].(string))
+				} else {
+					showError("Failed to disable 2FA!")
 				}
 			}
 		}

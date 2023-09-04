@@ -294,7 +294,7 @@ func CreateToolBar() *widgets.QToolBar {
 	save.SetIcon(gui.NewQIcon5("icons/save.svg"))
 	save.SetToolTip("Save")
 	save.ConnectTriggered(func(bool) {
-		sure := areYouSure("Are you sure you want to save?\n\nThis will overwrite the remote database with this current one!")
+		sure := areYouSure("Are you sure you want to save?\n\nThis will overwrite your remote database with this current one!")
 		if !sure {
 			return
 		}
@@ -326,7 +326,7 @@ func CreateToolBar() *widgets.QToolBar {
 				openDb(file)
 			}
 		} else {
-			sure := areYouSure("Are you sure you want to sync?\n\nThis will overwrite your current database!")
+			sure := areYouSure("Are you sure you want to sync?\n\nThis will fetch your remote database and overwrite\nany changes you have not saved!")
 			if !sure {
 				return
 			}
@@ -1033,8 +1033,8 @@ func getSecret(secret models.Secret) models.Secret {
 		repeatField.SetText(string(secret.Password))
 		urlField.SetText(secret.URL)
 		descriptionField.SetText(secret.Description)
-		createdField.SetText(secret.CreatedAt.Format("2006-01-02 15:04:05"))
-		updatedField.SetText(secret.UpdatedAt.Format("2006-01-02 15:04:05"))
+		createdField.SetText(secret.Created_at)
+		updatedField.SetText(secret.Updated_at)
 		if usernameField.Text() != "" {
 			usernameField.SetStyleSheet("border: 1px solid green")
 		} else {
@@ -1335,8 +1335,8 @@ func setTableItems(secret models.Secret) {
 	table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 	table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
 	table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
-	table.SetItem(row, 6, widgets.NewQTableWidgetItem2(secret.CreatedAt.Format("2006-01-02 15:04:05"), 0))
-	table.SetItem(row, 7, widgets.NewQTableWidgetItem2(secret.UpdatedAt.Format("2006-01-02 15:04:05"), 0))
+	table.SetItem(row, 6, widgets.NewQTableWidgetItem2(secret.Created_at, 0))
+	table.SetItem(row, 7, widgets.NewQTableWidgetItem2(secret.Updated_at, 0))
 }
 
 func setTableItems2(row int, secret models.Secret) {
@@ -1348,8 +1348,8 @@ func setTableItems2(row int, secret models.Secret) {
 	table.SetItem(row, 3, widgets.NewQTableWidgetItem2(asterisk, 0))
 	table.SetItem(row, 4, widgets.NewQTableWidgetItem2(secret.URL, 0))
 	table.SetItem(row, 5, widgets.NewQTableWidgetItem2(secret.Description, 0))
-	table.SetItem(row, 6, widgets.NewQTableWidgetItem2(secret.CreatedAt.Format("2006-01-02 15:04:05"), 0))
-	table.SetItem(row, 7, widgets.NewQTableWidgetItem2(secret.UpdatedAt.Format("2006-01-02 15:04:05"), 0))
+	table.SetItem(row, 6, widgets.NewQTableWidgetItem2(secret.Created_at, 0))
+	table.SetItem(row, 7, widgets.NewQTableWidgetItem2(secret.Updated_at, 0))
 	save.SetEnabled(true)
 }
 

@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -87,6 +88,10 @@ func createDatabaseAndSecretGroupIfNotExist(file string, name string) error {
 	err2 := db.First(&database).Error
 	if err2 != nil && err2 == gorm.ErrRecordNotFound {
 		database.Name = name
+		currentTime := time.Now()
+		formattedTime := currentTime.Format("2006-01-02 15:04:05")
+		database.Created_at = formattedTime
+		database.Updated_at = formattedTime
 		db.Create(&database)
 	}
 	log.Printf("Created database: %s", database.Name)
@@ -94,6 +99,10 @@ func createDatabaseAndSecretGroupIfNotExist(file string, name string) error {
 	err3 := db.First(&group, "name = ?", "General").Error
 	if err3 != nil && err3 == gorm.ErrRecordNotFound {
 		group.Name = "General"
+		currentTime := time.Now()
+		formattedTime := currentTime.Format("2006-01-02 15:04:05")
+		group.Created_at = formattedTime
+		group.Updated_at = formattedTime
 		group.DatabaseID = database.ID
 		db.Create(&group)
 	}
@@ -131,9 +140,15 @@ func createSubDatabase(file string, name string) (models.Database, error) {
 	err3 := db.First(&subDatabase, "name = ?", name).Error
 	if err3 != nil && err3 == gorm.ErrRecordNotFound {
 		subDatabase.Name = name
+		currentTime := time.Now()
+		formattedTime := currentTime.Format("2006-01-02 15:04:05")
+		subDatabase.Created_at = formattedTime
+		subDatabase.Updated_at = formattedTime
 		db.Create(&subDatabase)
 		var group models.SecretGroup
 		group.Name = "General"
+		group.Created_at = formattedTime
+		group.Updated_at = formattedTime
 		group.DatabaseID = subDatabase.ID
 		db.Create(&group)
 		return subDatabase, nil
@@ -226,6 +241,9 @@ func updateDatabase(file string, d string, name string) (models.Database, error)
 		return models.Database{}, result.Error
 	}
 	database.Name = name
+	currentTime := time.Now()
+	formattedTime := currentTime.Format("2006-01-02 15:04:05")
+	database.Updated_at = formattedTime
 	db.Save(&database)
 	return database, nil
 }
@@ -331,6 +349,10 @@ func createSecretGroup(file string, d string, name string) (models.SecretGroup, 
 	}
 	var group models.SecretGroup
 	group.Name = name
+	currentTime := time.Now()
+	formattedTime := currentTime.Format("2006-01-02 15:04:05")
+	group.Created_at = formattedTime
+	group.Updated_at = formattedTime
 	group.DatabaseID = database.ID
 	db.Create(&group)
 	return group, nil
@@ -398,6 +420,9 @@ func updateSecretGroup(file string, d string, g string, name string) (models.Sec
 	for _, group := range database.SecretGroups {
 		if group.Name == g {
 			group.Name = name
+			currentTime := time.Now()
+			formattedTime := currentTime.Format("2006-01-02 15:04:05")
+			group.Updated_at = formattedTime
 			db.Save(&group)
 			return group, nil
 		}
@@ -436,6 +461,10 @@ func createSecret(file string, d string, g string, s models.Secret) (models.Secr
 	for _, grp := range database.SecretGroups {
 		if grp.Name == g {
 			s.SecretGroupID = grp.ID
+			currentTime := time.Now()
+			formattedTime := currentTime.Format("2006-01-02 15:04:05")
+			s.Created_at = formattedTime
+			s.Updated_at = formattedTime
 			db.Create(&s)
 			return s, nil
 		}
@@ -480,6 +509,9 @@ func updateSecret(file string, d string, g string, id int, s models.Secret) (mod
 					secret.Password = s.Password
 					secret.URL = s.URL
 					secret.Description = s.Description
+					currentTime := time.Now()
+					formattedTime := currentTime.Format("2006-01-02 15:04:05")
+					secret.Updated_at = formattedTime
 					db.Save(&secret)
 					return secret, nil
 				}

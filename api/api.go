@@ -258,6 +258,8 @@ func loginHandler(c *gin.Context) {
 		return
 	}
 
+	data.Username = strings.ToLower(data.Username)
+
 	if !validateEmail(data.Username) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
@@ -339,7 +341,14 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
+	data.Username = strings.ToLower(data.Username)
+
 	if !validateEmail(data.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
+	if !isPasswordSecure(data.Password) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
@@ -416,6 +425,26 @@ func otpGenerateHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Generated QR code", "qr": key.String()})
+}
+
+func otpRemoveHandler(c *gin.Context) {
+	username := c.GetString("username")
+	user, err3 := getUser(username)
+	if err3 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to remove OTP"})
+		return
+	}
+	if !user.Verified {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to remove OTP"})
+		return
+	}
+	err2 := setTotp(username, "")
+	if err2 != nil {
+		log.Println(err2)
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to remove OTP"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "OTP removed"})
 }
 
 func passwordHandler(c *gin.Context) {
@@ -527,22 +556,61 @@ func validateEmail(email string) bool {
 	return emailRegex.MatchString(email)
 }
 
-func sendEmail(email string, code string) {
-	from := email
+func sendEmail(toEmail string, code string) {
 	password := emailPassword
 	to := []string{
-		email,
+		toEmail,
 	}
 	smtpHost := "smtp.gmail.com"
 	smtpPort := "587"
 	message := []byte(fmt.Sprintf("Subject: Finalpass Email Verification\n\nThis email was sent by Finalpass\n\nClick this link to verify your account:\n\n%s/verify?code=%s\n\nIf you did not request this, please ignore this email.", url, code))
-	auth := smtp.PlainAuth("", from, password, smtpHost)
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, message)
+	auth := smtp.PlainAuth("", email, password, smtpHost)
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, email, to, message)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("Email Sent Successfully!")
+}
+
+func isPasswordSecure(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+
+	hasUppercase := false
+	for _, character := range password {
+		if character >= 'A' && character <= 'Z' {
+			hasUppercase = true
+			break
+		}
+	}
+	if !hasUppercase {
+		return false
+	}
+
+	hasDigit := false
+	for _, character := range password {
+		if character >= '0' && character <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+	if !hasDigit {
+		return false
+	}
+
+	hasSpecialCharacter := false
+	for _, character := range password {
+		if (character >= '!' && character <= '/') ||
+			(character >= ':' && character <= '@') ||
+			(character >= '[' && character <= '`') ||
+			(character >= '{' && character <= '~') {
+			hasSpecialCharacter = true
+			break
+		}
+	}
+	return hasSpecialCharacter
 }
 
 func main() {
@@ -597,7 +665,8 @@ func main() {
 	auth.Use(authMiddleware())
 	{
 		auth.GET("/user/settings", settingsHandler)
-		auth.GET("/otp/generate", otpGenerateHandler)
+		auth.POST("/otp/generate", otpGenerateHandler)
+		auth.POST("/otp/remove", otpRemoveHandler)
 		auth.POST("/user/password", passwordHandler)
 		auth.POST("/user/save", saveHandler)
 		auth.GET("/user/sync", syncHandler)
