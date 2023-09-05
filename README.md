@@ -1,4 +1,6 @@
-# finalpass
+# Finalpass
+
+<img src="desktop/icons/main.svg" width="100">
 
 ## Install Go
 
