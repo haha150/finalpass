@@ -4,7 +4,6 @@ var Url string = ""
 var Password string = ""
 
 type Database struct {
-	// gorm.Model
 	ID           int           `gorm:"primaryKey"`
 	Name         string        `gorm:"unique;not null"`
 	Created_at   string        `gorm:"not null"`
@@ -13,7 +12,6 @@ type Database struct {
 }
 
 type SecretGroup struct {
-	// gorm.Model
 	ID         int    `gorm:"primaryKey"`
 	Name       string `gorm:"not null"`
 	DatabaseID int
@@ -23,7 +21,6 @@ type SecretGroup struct {
 }
 
 type Secret struct {
-	// gorm.Model
 	ID            int    `gorm:"primaryKey"`
 	Username      string `gorm:"not null"`
 	Password      []byte `gorm:"not null"`

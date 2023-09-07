@@ -245,70 +245,70 @@ func loginHandler(c *gin.Context) {
 	expectedHash2 := sha256.Sum256([]byte(chall + passwordIOS))
 	expectedHashString2 := hex.EncodeToString(expectedHash2[:])
 
-	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) || !bytes.Equal([]byte(expectedHashString2), []byte(hash)) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
+	if bytes.Equal([]byte(expectedHashString), []byte(hash)) || bytes.Equal([]byte(expectedHashString2), []byte(hash)) {
+		var data struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Totp     string `json:"totp"`
+		}
 
-	var data struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Totp     string `json:"totp"`
-	}
-
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
-
-	data.Username = strings.ToLower(data.Username)
-
-	if !validateEmail(data.Username) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
-
-	user, err2 := getUser(data.Username)
-	if err2 != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
-		return
-	}
-
-	if !user.Verified {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
-		return
-	}
-
-	if user.Totp != "" {
-		valid, err := totp.ValidateCustom(data.Totp, user.Totp, time.Now().UTC(), totp.ValidateOpts{
-			Period:    30,
-			Skew:      0,
-			Digits:    6,
-			Algorithm: otp.AlgorithmSHA512,
-		})
-		if err != nil {
-			c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Invalid credentials"})
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 			return
 		}
-		if !valid {
-			c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Invalid credentials"})
+
+		data.Username = strings.ToLower(data.Username)
+
+		if !validateEmail(data.Username) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 			return
 		}
-	}
 
-	match := CheckPasswordHash(data.Password, user.Password)
-	if !match {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
+		user, err2 := getUser(data.Username)
+		if err2 != nil {
+			c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
+			return
+		}
+
+		if !user.Verified {
+			c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
+			return
+		}
+
+		if user.Totp != "" {
+			valid, err := totp.ValidateCustom(data.Totp, user.Totp, time.Now().UTC(), totp.ValidateOpts{
+				Period:    30,
+				Skew:      0,
+				Digits:    6,
+				Algorithm: otp.AlgorithmSHA512,
+			})
+			if err != nil {
+				c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Invalid credentials"})
+				return
+			}
+			if !valid {
+				c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Invalid credentials"})
+				return
+			}
+		}
+
+		match := CheckPasswordHash(data.Password, user.Password)
+		if !match {
+			c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
+			return
+		}
+
+		token, err3 := generateToken(data.Username)
+		if err3 != nil {
+			c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Logged in", "token": token})
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
-
-	token, err3 := generateToken(data.Username)
-	if err3 != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid credentials"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Logged in", "token": token})
 }
 
 func registerHandler(c *gin.Context) {
@@ -334,47 +334,47 @@ func registerHandler(c *gin.Context) {
 	expectedHash2 := sha256.Sum256([]byte(chall + passwordIOS))
 	expectedHashString2 := hex.EncodeToString(expectedHash2[:])
 
-	if !bytes.Equal([]byte(expectedHashString), []byte(hash)) || !bytes.Equal([]byte(expectedHashString2), []byte(hash)) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
+	if bytes.Equal([]byte(expectedHashString), []byte(hash)) || bytes.Equal([]byte(expectedHashString2), []byte(hash)) {
+		var data User
 
-	var data User
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+			return
+		}
 
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
+		data.Username = strings.ToLower(data.Username)
 
-	data.Username = strings.ToLower(data.Username)
+		if !validateEmail(data.Username) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+			return
+		}
 
-	if !validateEmail(data.Username) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
+		if !isPasswordSecure(data.Password) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+			return
+		}
 
-	if !isPasswordSecure(data.Password) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), 14)
+		if err != nil {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), 14)
-	if err != nil {
-		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
+		data.Password = string(hashedPassword)
+		data.Verified = false
+		data.Code = generateCode()
 
-	data.Password = string(hashedPassword)
-	data.Verified = false
-	data.Code = generateCode()
-
-	err2 := addUser(data)
-	if err2 != nil {
+		err2 := addUser(data)
+		if err2 != nil {
+			c.JSON(http.StatusCreated, gin.H{"message": "Check your email for verification"})
+			return
+		}
+		sendEmail(data.Username, data.Code)
 		c.JSON(http.StatusCreated, gin.H{"message": "Check your email for verification"})
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
-	sendEmail(data.Username, data.Code)
-	c.JSON(http.StatusCreated, gin.H{"message": "Check your email for verification"})
 }
 
 func verifyHandler(c *gin.Context) {

@@ -202,7 +202,7 @@ func Register() bool {
 				}
 			}
 		} else {
-			showError("Email or password is missing or passwords dont match!")
+			showError("Email or password is missing or passwords dont match or password is too weak!")
 		}
 	})
 	buttons.ConnectRejected(func() {
@@ -370,6 +370,10 @@ func Settings(user *models.User) {
 		}
 	})
 	layout.AddWidget(mfaCheckbox, 0, core.Qt__AlignLeft)
+	separator2 := widgets.NewQFrame(nil, 0)
+	separator2.SetFrameShape(widgets.QFrame__HLine)
+	separator2.SetFrameShadow(widgets.QFrame__Sunken)
+	layout.AddWidget(separator2, 0, 0)
 	buttons := widgets.NewQDialogButtonBox(nil)
 	buttons.SetOrientation(core.Qt__Horizontal)
 	buttons.SetStandardButtons(widgets.QDialogButtonBox__Cancel)
