@@ -1,9 +1,9 @@
 #!/bin/bash
 cp -r ../desktop/* packages/se.symeri.finalpass/data/
 rm packages/se.symeri.finalpass/data/test.db packages/se.symeri.finalpass/data/config.json
-CGO_ENABLED=1 go build -C packages/se.symeri.finalpass/data/ -tags=release -ldflags="-s -w -H=windowsgui" -o .finalpass.exe
+CGO_ENABLED=1 go build -C packages/se.symeri.finalpass/data/ -tags=release -ldflags="-s -w -H=windowsgui" -o .Finalpass.exe
 rm -r packages/se.symeri.finalpass/data/*
-mv packages/se.symeri.finalpass/data/.finalpass.exe packages/se.symeri.finalpass/data/finalpass.exe
+mv packages/se.symeri.finalpass/data/.Finalpass.exe packages/se.symeri.finalpass/data/Finalpass.exe
 cp ../desktop/config.env packages/se.symeri.finalpass/data/
 cp -r ../desktop/qtbox packages/se.symeri.finalpass/data/
 cp -r ../desktop/icons packages/se.symeri.finalpass/data/
