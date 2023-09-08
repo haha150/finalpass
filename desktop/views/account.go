@@ -108,7 +108,7 @@ func Register() bool {
 	dialog.SetWindowTitle("Register")
 	layout := widgets.NewQVBoxLayout2(dialog)
 	dialog.SetLayout(layout)
-	label := widgets.NewQLabel2("Password must contain at least:\n- 8 characters\n- 1 uppercase character\n- 1 lowercase character\n- 1 number\n- 1 special character", nil, 0)
+	label := widgets.NewQLabel2("Password must contain at least:\n- 8 characters\n- 1 uppercase letter\n- 1 lowercase letter\n- 1 digit\n- 1 special character", nil, 0)
 	layout.AddWidget(label, 0, core.Qt__AlignLeft)
 	layout.AddWidget(widgets.NewQLabel2("Email", nil, 0), 0, core.Qt__AlignLeft)
 	email := widgets.NewQLineEdit(nil)
