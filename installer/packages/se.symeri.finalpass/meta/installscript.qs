@@ -46,9 +46,8 @@ Component.prototype.createOperations = function()
         // call the base create operations function
         component.createOperations();
         if (systemInfo.productType === "windows") {
-            component.addOperation("CreateShortcut", "@TargetDir@/finalpass.exe", "@StartMenuDir@/finalpass.lnk",
-                "workingDirectory=@TargetDir@", "iconPath=%SystemRoot%/system32/SHELL32.dll",
-                "iconId=2", "description=Open Finalpass");
+            component.addOperation("CreateShortcut", "@TargetDir@/finalpass.exe", "@StartMenuDir@/finalpass.lnk");
+            component.addOperation("CreateShortcut", "@TargetDir@/finalpass.exe", "@HomeDir@/Desktop/finalpass.lnk");
         }
     } catch (e) {
         console.log(e);
