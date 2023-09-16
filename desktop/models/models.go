@@ -21,8 +21,8 @@ type SecretGroup struct {
 }
 
 type Secret struct {
-	ID            int    `gorm:"primaryKey"`
-	Username      string `gorm:"not null"`
+	ID            int `gorm:"primaryKey"`
+	Username      string
 	Password      []byte `gorm:"not null"`
 	Title         string
 	Description   string

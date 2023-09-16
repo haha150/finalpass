@@ -530,6 +530,11 @@ func saveHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid request body"})
 		return
 	}
+	maxFileSize := int64(10 * 1024 * 1024)
+	if file[0].Size > maxFileSize {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "Max file size exceeded"})
+		return
+	}
 	if err2 := c.SaveUploadedFile(file[0], "files/"+username+".db"); err2 != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Invalid request body"})
 		return

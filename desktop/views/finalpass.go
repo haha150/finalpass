@@ -811,7 +811,7 @@ func createPassword(file string) string {
 	password := ""
 
 	button.ConnectClicked(func(bool) {
-		password = security.GenerateStrongPassword(20)
+		password = security.GenerateStrongPassword(20, true, true, true, true)
 		passwordField.SetText(password)
 		repeatField.SetText(password)
 		passwordField.SetStyleSheet("border: 1px solid green")
@@ -954,6 +954,12 @@ func getSecretGroup(group string) string {
 }
 
 func getSecret(secret models.Secret) models.Secret {
+	length := 20
+	lower := true
+	upper := true
+	digits := true
+	special := true
+
 	dialog := widgets.NewQDialog(nil, 0)
 	dialog.SetWindowTitle("Create secret")
 
@@ -963,7 +969,7 @@ func getSecret(secret models.Secret) models.Secret {
 
 	formLayout := widgets.NewQFormLayout(nil)
 
-	password := security.GenerateStrongPassword(20)
+	password := security.GenerateStrongPassword(length, lower, upper, digits, special)
 
 	titleField := widgets.NewQLineEdit(nil)
 	usernameField := widgets.NewQLineEdit(nil)
@@ -973,8 +979,6 @@ func getSecret(secret models.Secret) models.Secret {
 	descriptionField := widgets.NewQTextEdit(nil)
 	createdField := widgets.NewQLineEdit(nil)
 	updatedField := widgets.NewQLineEdit(nil)
-
-	usernameField.SetStyleSheet("border: 1px solid red")
 
 	passwordField.SetText(password)
 	passwordField.SetEchoMode(2)
@@ -986,14 +990,6 @@ func getSecret(secret models.Secret) models.Secret {
 
 	createdField.SetReadOnly(true)
 	updatedField.SetReadOnly(true)
-
-	usernameField.ConnectTextChanged(func(_ string) {
-		if usernameField.Text() != "" {
-			usernameField.SetStyleSheet("border: 1px solid green")
-		} else {
-			usernameField.SetStyleSheet("border: 1px solid red")
-		}
-	})
 
 	passwordField.ConnectTextChanged(func(_ string) {
 		if passwordField.EchoMode() == 0 {
@@ -1018,14 +1014,69 @@ func getSecret(secret models.Secret) models.Secret {
 		}
 	})
 
+	passSettings := widgets.NewQPushButton2("Password settings", nil)
+	lengthC := widgets.NewQSlider(nil)
+	lengthC.SetMinimum(4)
+	lengthC.SetMaximum(30)
+	lengthC.SetValue(length)
+	lengthC.SetSingleStep(1)
+	lengthC.SetOrientation(core.Qt__Horizontal)
+	lengthT := widgets.NewQLabel(nil, 0)
+	lengthT.SetText(fmt.Sprintf("%d", length))
+	lowerC := widgets.NewQCheckBox(nil)
+	lowerC.SetText("Lowercase")
+	upperC := widgets.NewQCheckBox(nil)
+	upperC.SetText("Uppercase")
+	digitsC := widgets.NewQCheckBox(nil)
+	digitsC.SetText("Digits")
+	specialC := widgets.NewQCheckBox(nil)
+	specialC.SetText("Special characters")
+
+	lowerC.SetChecked(true)
+	upperC.SetChecked(true)
+	digitsC.SetChecked(true)
+	specialC.SetChecked(true)
+
+	lengthC.ConnectValueChanged(func(value int) {
+		length = value
+		lengthT.SetText(fmt.Sprintf("%d", length))
+	})
+
+	lowerC.ConnectStateChanged(func(state int) {
+		lower = state == 2
+	})
+
+	upperC.ConnectStateChanged(func(state int) {
+		upper = state == 2
+	})
+
+	digitsC.ConnectStateChanged(func(state int) {
+		digits = state == 2
+	})
+
+	specialC.ConnectStateChanged(func(state int) {
+		special = state == 2
+	})
+
 	formLayout.AddRow3("Title:", titleField)
 	formLayout.AddRow3("Username:", usernameField)
 	formLayout.AddRow3("Password:", passwordField)
 	formLayout.AddRow3("Repeat password:", repeatField)
+	formLayout.AddRow3("", passSettings)
 	formLayout.AddRow3("URL:", urlField)
 	formLayout.AddRow3("Description:", descriptionField)
 
-	if secret.Username != "" && secret.Password != nil {
+	passSettings.ConnectClicked(func(bool) {
+		formLayout.RemoveRow2(passSettings)
+		formLayout.AddRow3("Length:", lengthC)
+		formLayout.AddRow3("", lengthT)
+		formLayout.AddRow3("Lowercase:", lowerC)
+		formLayout.AddRow3("Uppercase:", upperC)
+		formLayout.AddRow3("Digits:", digitsC)
+		formLayout.AddRow3("Special characters:", specialC)
+	})
+
+	if secret.Password != nil {
 		dialog.SetWindowTitle("Edit secret")
 		titleField.SetText(secret.Title)
 		usernameField.SetText(secret.Username)
@@ -1035,11 +1086,6 @@ func getSecret(secret models.Secret) models.Secret {
 		descriptionField.SetText(secret.Description)
 		createdField.SetText(secret.Created_at)
 		updatedField.SetText(secret.Updated_at)
-		if usernameField.Text() != "" {
-			usernameField.SetStyleSheet("border: 1px solid green")
-		} else {
-			usernameField.SetStyleSheet("border: 1px solid red")
-		}
 		formLayout.AddRow3("Created at:", createdField)
 		formLayout.AddRow3("Updated at:", updatedField)
 	}
@@ -1070,14 +1116,17 @@ func getSecret(secret models.Secret) models.Secret {
 	button.SetStyleSheet("border-width: 0px;")
 
 	button.ConnectClicked(func(bool) {
-		password = security.GenerateStrongPassword(20)
+		if !lower && !upper && !digits && !special {
+			showError("At least one password setting must be enabled!")
+			return
+		}
+		password = security.GenerateStrongPassword(length, lower, upper, digits, special)
 		passwordField.SetText(password)
 		repeatField.SetText(password)
 		passwordField.SetStyleSheet("border: 1px solid green")
 		repeatField.SetStyleSheet("border: 1px solid green")
 	})
 
-	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
 	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
 	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
 	formLayout2.AddRow5(widgets.NewQWidget(nil, 0))
@@ -1099,7 +1148,7 @@ func getSecret(secret models.Secret) models.Secret {
 	buttons.SetOrientation(core.Qt__Horizontal)
 	buttons.SetStandardButtons(widgets.QDialogButtonBox__Ok | widgets.QDialogButtonBox__Cancel)
 	buttons.ConnectAccepted(func() {
-		if passwordField.Text() == repeatField.Text() && usernameField.Text() != "" {
+		if passwordField.Text() == repeatField.Text() {
 			dialog.Accept()
 		} else {
 			showError("Missing username or passwords do not match!")
