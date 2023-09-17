@@ -380,24 +380,24 @@ func registerHandler(c *gin.Context) {
 func verifyHandler(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid query parameter"})
+		c.HTML(http.StatusBadRequest, "verified.html", gin.H{"message": "Invalid query parameter"})
 		return
 	}
 	user, err := getUserByCode(code)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "User already verified"})
+		c.HTML(http.StatusNotFound, "verified.html", gin.H{"message": "Account already verified"})
 		return
 	}
 	if user.Verified {
-		c.JSON(http.StatusNotFound, gin.H{"message": "User already verified"})
+		c.HTML(http.StatusNotFound, "verified.html", gin.H{"message": "Account already verified"})
 		return
 	}
 	err2 := setVerified(user.Username)
 	if err2 != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "User already verified"})
+		c.HTML(http.StatusNotFound, "verified.html", gin.H{"message": "Account already verified"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User verified"})
+	c.HTML(http.StatusOK, "verified.html", gin.H{"message": "Account verified"})
 }
 
 func otpGenerateHandler(c *gin.Context) {
@@ -501,7 +501,7 @@ func settingsHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User found", "verified": user.Verified, "totp": user.Totp != ""})
+	c.JSON(http.StatusOK, gin.H{"message": "Account found", "verified": user.Verified, "totp": user.Totp != ""})
 }
 
 func saveHandler(c *gin.Context) {
@@ -666,6 +666,8 @@ func main() {
 	secretKey = []byte(encodedKey)
 
 	router := gin.Default()
+
+	router.LoadHTMLGlob("templates/*")
 
 	router.Use(cors.Default())
 
