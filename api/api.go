@@ -688,7 +688,7 @@ func main() {
 		auth.GET("/user/sync", syncHandler)
 	}
 
-	err2 := router.RunTLS(":3000", "certificate.crt", "private.key")
+	err2 := router.RunTLS(":3000", "fullchain.pem", "privkey.pem")
 	if err2 != nil {
 		log.Println("ListenAndServe: ", err2)
 		router.Run(":3000")
