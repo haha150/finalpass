@@ -163,14 +163,14 @@ func setTotp(username string, totp string) error {
 	return nil
 }
 
-func removeUser(username string) error {
+func deleteUser(username string) error {
 	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	result := db.Where("username = ?", username).Delete(&User{})
+	result := db.Unscoped().Where("username = ?", username).Delete(&User{})
 	if result.Error != nil {
 		log.Println(result.Error)
 		return result.Error
@@ -592,7 +592,7 @@ func terminateHandler(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 	}
-	err2 := removeUser(username)
+	err2 := deleteUser(username)
 	if err2 != nil {
 		log.Println(err2)
 	}
