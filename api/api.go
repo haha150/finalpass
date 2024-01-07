@@ -590,8 +590,7 @@ func terminateHandler(c *gin.Context) {
 	}
 	err := os.Remove("files/" + username + ".db")
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to terminate account"})
-		return
+		log.Println(err)
 	}
 	err2 := removeUser(username)
 	if err2 != nil {
