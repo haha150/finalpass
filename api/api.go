@@ -163,6 +163,22 @@ func setTotp(username string, totp string) error {
 	return nil
 }
 
+func deleteUser(username string) error {
+	db, err := gorm.Open(sqlite.Open(file), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	result := db.Unscoped().Where("username = ?", username).Delete(&User{})
+	if result.Error != nil {
+		log.Println(result.Error)
+		return result.Error
+	}
+
+	return nil
+}
+
 func generateCode() string {
 	code := uuid.New()
 	return code.String()
@@ -561,6 +577,28 @@ func syncHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/octet-stream", file)
 }
 
+func terminateHandler(c *gin.Context) {
+	username := c.GetString("username")
+	user, err3 := getUser(username)
+	if err3 != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	if !user.Verified {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Failed to get user"})
+		return
+	}
+	err := os.Remove("files/" + username + ".db")
+	if err != nil {
+		log.Println(err)
+	}
+	err2 := deleteUser(username)
+	if err2 != nil {
+		log.Println(err2)
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Account terminated"})
+}
+
 func validateEmail(email string) bool {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
@@ -686,6 +724,7 @@ func main() {
 		auth.POST("/user/password", passwordHandler)
 		auth.POST("/user/save", saveHandler)
 		auth.GET("/user/sync", syncHandler)
+		auth.POST("/user/terminate", terminateHandler)
 	}
 
 	err2 := router.RunTLS(":3000", "fullchain.pem", "privkey.pem")
