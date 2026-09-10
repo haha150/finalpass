@@ -70,6 +70,9 @@ not use the network.
 ./eng/restore-libsodium.ps1
 dotnet restore Finalpass.sln
 dotnet test Finalpass.sln --configuration Release --no-restore
+dotnet restore src/Finalpass.App/Finalpass.App.csproj `
+  --runtime win-x64 `
+  --property:PublishReadyToRun=true
 dotnet publish src/Finalpass.App/Finalpass.App.csproj `
   --configuration Release `
   --runtime win-x64 `

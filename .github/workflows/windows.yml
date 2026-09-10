@@ -48,6 +48,12 @@ jobs:
       - name: Test
         run: dotnet test Finalpass.sln --configuration Release --no-restore
 
+      - name: Restore win-x64 ReadyToRun packages
+        run: >-
+          dotnet restore src/Finalpass.App/Finalpass.App.csproj
+          --runtime win-x64
+          --property:PublishReadyToRun=true
+
       - name: Publish self-contained x64 app
         run: >-
           dotnet publish src/Finalpass.App/Finalpass.App.csproj
