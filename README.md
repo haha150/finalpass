@@ -1,11 +1,9 @@
 # Finalpass
 
-Finalpass is being rebuilt as a completely offline password manager for
-Windows 11 x64. The new desktop application is C#/.NET 10 with WinUI 3; the old
-Go/Qt desktop and API remain in the repository as historical code and are not
-part of the new release.
+Finalpass is a completely offline password manager for Windows 11 x64. The
+desktop application is built with C#/.NET 10 and WinUI 3.
 
-## What works in the rebuild
+## Features
 
 - One portable `.fpass` vault file with no plaintext database or temp file.
 - Argon2id password derivation and XChaCha20-Poly1305 authenticated encryption
@@ -37,8 +35,8 @@ part of the new release.
 - Branded Windows assets in both publish forms, verified with the full WinUI
   compiler and a standard-user Windows 11 VM smoke test.
 
-The rebuild is an engineering preview, not a security-audited 1.0 release. See
-the remaining release gates in [the rebuild plan](docs/DESKTOP_REBUILD_PLAN.md).
+Finalpass has not received an independent security audit. See the remaining
+security and validation work in [the release checklist](docs/RELEASE_CHECKLIST.md).
 Automatic `.fpass.bak` files can be opened directly from the app's Open dialog
 if the primary vault is damaged.
 

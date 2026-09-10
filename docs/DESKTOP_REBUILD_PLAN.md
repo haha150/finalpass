@@ -1,14 +1,14 @@
 # Finalpass Desktop Rebuild Plan
 
-Status: approved on 2026-09-09; feature implementation is complete and release
-validation is in progress.
+Status: approved on 2026-09-09; feature implementation is complete and the
+initial Windows release was published on 2026-09-10.
 
 ## 1. Product scope
 
-Rebuild Finalpass as a local-first, single-user password manager for Windows. The
-old Go/Qt desktop application is reference material for useful behavior only.
-The `api` application, accounts, remote save/sync, and 2FA for the old online
-account are outside the new product.
+Rebuild Finalpass as a local-first, single-user password manager for Windows.
+The previous Go/Qt application informed some useful behavior but has since been
+removed. Accounts, remote save/sync, and 2FA from the old online application are
+outside the new product.
 
 The first release will provide:
 
@@ -201,9 +201,9 @@ docs/
   THREAT_MODEL.md
 ```
 
-The old Go desktop and API code will remain untouched for repository history and
-will be excluded from the new solution and release artifacts. No old `.db`
-migration code or legacy cryptography will be carried into the new application.
+The old Go desktop, API, and installer code has been removed from the active
+tree and remains available in Git history. No old `.db` migration code or legacy
+cryptography is carried into the new application.
 
 ## 8. Implementation phases and gates
 

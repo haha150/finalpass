@@ -27,9 +27,6 @@ config.json
 *.crt
 api.img
 config.env
-installer/packages/se.symeri.finalpass/data/*
-installer/dist/*
-
 # dependencies
 node_modules/
 
