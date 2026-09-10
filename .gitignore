@@ -65,3 +65,16 @@ yarn-error.*
 *.tsbuildinfo
 
 abc
+
+# .NET / Visual Studio
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+TestResults/
+artifacts/
+.tmp/
+
+# Local native dependencies are restored by the verified build script.
+src/Finalpass.Cryptography/runtimes/

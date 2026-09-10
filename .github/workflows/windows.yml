@@ -1,0 +1,122 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-publish:
+    runs-on: windows-2025
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.401
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Restore verified libsodium binary
+        shell: pwsh
+        run: ./eng/restore-libsodium.ps1
+
+      - name: Restore
+        run: dotnet restore Finalpass.sln
+
+      - name: Verify formatting
+        run: dotnet format Finalpass.sln --verify-no-changes --no-restore
+
+      - name: Check vulnerable dependencies
+        run: dotnet list Finalpass.sln package --vulnerable --include-transitive --no-restore
+
+      - name: Verify offline application source
+        shell: pwsh
+        run: ./eng/assert-offline.ps1
+
+      - name: Test
+        run: dotnet test Finalpass.sln --configuration Release --no-restore
+
+      - name: Publish self-contained x64 app
+        run: >-
+          dotnet publish src/Finalpass.App/Finalpass.App.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --no-restore
+          --output artifacts/publish/win-x64
+
+      - name: Generate SPDX SBOM
+        shell: pwsh
+        run: |
+          $sbomToolPath = "$env:RUNNER_TEMP/sbom-tool"
+          dotnet tool install Microsoft.Sbom.DotNetTool --version 4.1.5 --tool-path $sbomToolPath
+          & "$sbomToolPath/sbom-tool" generate `
+            -b artifacts/publish/win-x64 `
+            -bc . `
+            -pn Finalpass `
+            -pv 0.1.0 `
+            -ps "Ali Symeri" `
+            -nsb "https://github.com/haha150/finalpass/sbom"
+          Copy-Item `
+            artifacts/publish/win-x64/_manifest/spdx_2.2/manifest.spdx.json `
+            artifacts/Finalpass-0.1.0.spdx.json
+
+      - name: Create portable archive
+        shell: pwsh
+        run: Compress-Archive -Path artifacts/publish/win-x64/* -DestinationPath artifacts/Finalpass-0.1.0-win-x64-portable.zip
+
+      - name: Restore verified installer compiler
+        shell: pwsh
+        run: ./eng/restore-inno.ps1
+
+      - name: Build current-user installer
+        shell: pwsh
+        run: '& artifacts/dependencies/inno/installed/ISCC.exe packaging/Finalpass.iss'
+
+      - name: Smoke-test current-user install, update, association, and uninstall
+        shell: pwsh
+        run: ./eng/test-installer.ps1 -InstallerPath artifacts/installer/Finalpass-0.1.0-win-x64-setup.exe
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          Copy-Item `
+            artifacts/installer/Finalpass-0.1.0-win-x64-setup.exe `
+            artifacts/Finalpass-0.1.0-win-x64-setup.exe
+          $files = @(
+            'artifacts/Finalpass-0.1.0-win-x64-portable.zip',
+            'artifacts/Finalpass-0.1.0-win-x64-setup.exe',
+            'artifacts/Finalpass-0.1.0.spdx.json'
+          )
+          $artifactRoot = (Resolve-Path 'artifacts').Path
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
+            $relativePath = [IO.Path]::GetRelativePath(
+              $artifactRoot,
+              (Resolve-Path $file).Path).Replace('\', '/')
+            "$hash  $relativePath"
+          }
+          $lines | Set-Content -Encoding ascii artifacts/SHA256SUMS.txt
+
+      - name: Upload release candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: Finalpass-win-x64
+          path: |
+            artifacts/Finalpass-0.1.0-win-x64-portable.zip
+            artifacts/Finalpass-0.1.0-win-x64-setup.exe
+            artifacts/Finalpass-0.1.0.spdx.json
+            artifacts/SHA256SUMS.txt
+          if-no-files-found: error

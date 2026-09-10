@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Finalpass.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Finalpass.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

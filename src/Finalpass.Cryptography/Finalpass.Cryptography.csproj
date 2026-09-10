@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Finalpass.Core\Finalpass.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="runtimes\win-x64\native\libsodium.dll"
+             Link="libsodium.dll"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             Condition="Exists('runtimes\win-x64\native\libsodium.dll')" />
+  </ItemGroup>
+
+  <Target Name="EnsureWindowsLibsodium"
+          BeforeTargets="PrepareForBuild"
+          Condition="$([MSBuild]::IsOSPlatform('Windows')) and !Exists('runtimes\win-x64\native\libsodium.dll')">
+    <Error Text="libsodium.dll is missing. Run eng/restore-libsodium.ps1 before building." />
+  </Target>
+
+</Project>
