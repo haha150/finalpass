@@ -51,6 +51,13 @@ public sealed partial class MainWindow : Window
         RegisterSystemLockNotifications();
     }
 
+    /// <summary>
+    /// The theme actually in effect for the window, resolved from "System" to a
+    /// concrete Light/Dark value. Dialogs must use this (not ElementTheme.Default)
+    /// because popups do not inherit a Default theme from their parent.
+    /// </summary>
+    public ElementTheme CurrentTheme => RootGrid.ActualTheme;
+
     public void ApplyTheme(string theme)
     {
         RootGrid.RequestedTheme = theme switch

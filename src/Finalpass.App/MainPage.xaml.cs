@@ -241,6 +241,7 @@ public sealed partial class MainPage : Page
                 ContentDialog readOnlyDialog = new()
                 {
                     XamlRoot = XamlRoot,
+                    RequestedTheme = CurrentElementTheme,
                     Title = "Vault already open",
                     Content = "Another Finalpass process is editing this vault. Open a read-only " +
                         "snapshot instead? You can view, search, copy, and back up entries, but cannot save changes.",
@@ -424,6 +425,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Delete this folder?",
             Content = $"“{folder.Name}” will be removed. Its entries and child folders are kept " +
                 "at the parent level when you save the vault.",
@@ -448,6 +450,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = title,
             Content = nameBox,
             PrimaryButtonText = "Save",
@@ -479,6 +482,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Delete this entry?",
             Content = $"“{ViewModel.SelectedEntry.Title}” will be removed when you save the vault.",
             PrimaryButtonText = "Delete",
@@ -588,6 +592,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Generate a password",
             Content = new ScrollViewer { Content = content, MaxHeight = 580 },
             PrimaryButtonText = "Generate",
@@ -767,6 +772,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Settings",
             Content = content,
             PrimaryButtonText = "Save",
@@ -862,6 +868,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Save changes?",
             Content = "The current vault contains unsaved changes.",
             PrimaryButtonText = "Save",
@@ -909,6 +916,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Create a vault",
             Content = content,
             PrimaryButtonText = "Create",
@@ -955,6 +963,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = title,
             Content = content,
             PrimaryButtonText = "Unlock",
@@ -997,6 +1006,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = "Change master password",
             Content = content,
             PrimaryButtonText = "Change",
@@ -1057,6 +1067,7 @@ public sealed partial class MainPage : Page
         ContentDialog dialog = new()
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
             Title = title,
             Content = exception.Message,
             CloseButtonText = "OK",
@@ -1264,6 +1275,14 @@ public sealed partial class MainPage : Page
             };
         }
     }
+
+    /// <summary>
+    /// The theme dialogs should request. ContentDialog is hosted in a popup and does
+    /// not inherit ElementTheme.Default from its parent, so every dialog must be given
+    /// this resolved, concrete Light/Dark value explicitly.
+    /// </summary>
+    private ElementTheme CurrentElementTheme =>
+        App.Window is MainWindow window ? window.CurrentTheme : ActualTheme;
 
     private async Task RememberVaultAsync(string path)
     {
