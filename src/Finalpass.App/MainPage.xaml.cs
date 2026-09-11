@@ -19,7 +19,6 @@ public sealed partial class MainPage : Page
     private const double NavigationPaneMaximumWidth = 480;
     private const double LoginListMaximumWidth = 800;
 
-    private readonly DispatcherTimer _autosaveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer _autoLockTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private DateTimeOffset _lastActivityUtc = DateTimeOffset.UtcNow;
@@ -38,7 +37,6 @@ public sealed partial class MainPage : Page
         InitializeComponent();
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         ViewModel.VaultChanged += ViewModel_VaultChanged;
-        _autosaveTimer.Tick += AutosaveTimer_Tick;
         _autoLockTimer.Tick += AutoLockTimer_Tick;
         _autoLockTimer.Start();
         Loaded += MainPage_Loaded;
@@ -814,7 +812,6 @@ public sealed partial class MainPage : Page
             return false;
         }
 
-        _autosaveTimer.Stop();
         await _saveGate.WaitAsync();
         try
         {
@@ -1087,18 +1084,7 @@ public sealed partial class MainPage : Page
 
     private void ViewModel_VaultChanged(object? sender, EventArgs e)
     {
-        _autosaveTimer.Stop();
-        _autosaveTimer.Start();
         ViewModel.StatusText = "Unsaved changes…";
-    }
-
-    private async void AutosaveTimer_Tick(object? sender, object e)
-    {
-        _autosaveTimer.Stop();
-        if (ViewModel.IsVaultOpen && ViewModel.IsDirty)
-        {
-            await SaveCurrentAsync();
-        }
     }
 
     private async void AutoLockTimer_Tick(object? sender, object e)
@@ -1210,7 +1196,6 @@ public sealed partial class MainPage : Page
 
         try
         {
-            _autosaveTimer.Stop();
             if (ViewModel.IsWritable && ViewModel.IsDirty)
             {
                 await _saveGate.WaitAsync();
@@ -1327,8 +1312,6 @@ public sealed partial class MainPage : Page
     {
         ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
         ViewModel.VaultChanged -= ViewModel_VaultChanged;
-        _autosaveTimer.Stop();
-        _autosaveTimer.Tick -= AutosaveTimer_Tick;
         _autoLockTimer.Stop();
         _autoLockTimer.Tick -= AutoLockTimer_Tick;
         ViewModel.Dispose();
