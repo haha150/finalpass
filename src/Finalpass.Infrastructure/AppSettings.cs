@@ -4,6 +4,8 @@ namespace Finalpass.Infrastructure;
 
 public sealed class AppSettings
 {
+    public string Theme { get; set; } = "System";
+
     public int IdleLockMinutes { get; set; } = 5;
 
     public int ClipboardClearSeconds { get; set; } = 30;
@@ -32,6 +34,11 @@ public sealed class AppSettings
 
     internal AppSettings Normalize()
     {
+        Theme = string.Equals(Theme, "Light", StringComparison.OrdinalIgnoreCase)
+            ? "Light"
+            : string.Equals(Theme, "Dark", StringComparison.OrdinalIgnoreCase)
+                ? "Dark"
+                : "System";
         IdleLockMinutes = Math.Clamp(IdleLockMinutes, 1, 120);
         ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300);
         if (string.IsNullOrWhiteSpace(LastVaultPath) || LastVaultPath.Length > 32_767)

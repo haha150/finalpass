@@ -9,6 +9,7 @@ public sealed class AppSettingsTests
         string path = Path.Combine(directory.Path, "settings.json");
         AppSettings expected = new()
         {
+            Theme = "Dark",
             IdleLockMinutes = 12,
             ClipboardClearSeconds = 45,
             LastVaultPath = Path.Combine(directory.Path, "Personal.fpass"),
@@ -20,6 +21,7 @@ public sealed class AppSettingsTests
         await AppSettingsService.SaveAsync(expected, path);
         AppSettings actual = await AppSettingsService.LoadAsync(path);
 
+        Assert.Equal("Dark", actual.Theme);
         Assert.Equal(12, actual.IdleLockMinutes);
         Assert.Equal(45, actual.ClipboardClearSeconds);
         Assert.Equal(Path.Combine(directory.Path, "Personal.fpass"), actual.LastVaultPath);
@@ -43,9 +45,10 @@ public sealed class AppSettingsTests
         string boundedPath = Path.Combine(directory.Path, "bounded.json");
         await File.WriteAllTextAsync(
             boundedPath,
-            "{\"idleLockMinutes\":-1,\"clipboardClearSeconds\":9999," +
+            "{\"theme\":\"sepia\",\"idleLockMinutes\":-1,\"clipboardClearSeconds\":9999," +
             "\"passwordLength\":2,\"passphraseWordCount\":99,\"passphraseSeparator\":\"word\"}");
         AppSettings bounded = await AppSettingsService.LoadAsync(boundedPath);
+        Assert.Equal("System", bounded.Theme);
         Assert.Equal(1, bounded.IdleLockMinutes);
         Assert.Equal(300, bounded.ClipboardClearSeconds);
         Assert.Equal(12, bounded.PasswordLength);

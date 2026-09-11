@@ -51,6 +51,16 @@ public sealed partial class MainWindow : Window
         RegisterSystemLockNotifications();
     }
 
+    public void ApplyTheme(string theme)
+    {
+        RootGrid.RequestedTheme = theme switch
+        {
+            "Light" => ElementTheme.Light,
+            "Dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+    }
+
     private void RegisterSystemLockNotifications()
     {
         _windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);

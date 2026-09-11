@@ -41,9 +41,16 @@ public sealed partial class MainPage : Page
         _autosaveTimer.Tick += AutosaveTimer_Tick;
         _autoLockTimer.Tick += AutoLockTimer_Tick;
         _autoLockTimer.Start();
+        Loaded += MainPage_Loaded;
         Unloaded += MainPage_Unloaded;
         UpdateVisualState();
         _settingsLoadTask = LoadSettingsAsync();
+    }
+
+    private async void MainPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        await _settingsLoadTask;
+        ApplyTheme();
     }
 
     private void PaneSplitter_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -712,6 +719,18 @@ public sealed partial class MainPage : Page
     {
         await _settingsLoadTask;
 
+        ComboBox themeBox = new()
+        {
+            Header = "Appearance",
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = new[] { "Use Windows setting", "Light", "Dark" },
+            SelectedIndex = _settings.Theme switch
+            {
+                "Light" => 1,
+                "Dark" => 2,
+                _ => 0,
+            },
+        };
         NumberBox idleBox = new()
         {
             Header = "Lock after inactivity (minutes)",
@@ -731,6 +750,7 @@ public sealed partial class MainPage : Page
             Value = _settings.ClipboardClearSeconds,
         };
         StackPanel content = new() { Spacing = 12, MinWidth = 360 };
+        content.Children.Add(themeBox);
         content.Children.Add(idleBox);
         content.Children.Add(new TextBlock
         {
@@ -764,6 +784,13 @@ public sealed partial class MainPage : Page
             return;
         }
 
+        _settings.Theme = themeBox.SelectedIndex switch
+        {
+            1 => "Light",
+            2 => "Dark",
+            _ => "System",
+        };
+        ApplyTheme();
         _settings.IdleLockMinutes = checked((int)idleBox.Value);
         _settings.ClipboardClearSeconds = checked((int)clipboardBox.Value);
         _lastActivityUtc = DateTimeOffset.UtcNow;
@@ -1210,6 +1237,7 @@ public sealed partial class MainPage : Page
     private async Task LoadSettingsAsync()
     {
         _settings = await AppSettingsService.LoadAsync();
+        ApplyTheme();
         if (!string.IsNullOrWhiteSpace(_settings.LastVaultPath) &&
             !File.Exists(_settings.LastVaultPath))
         {
@@ -1218,6 +1246,23 @@ public sealed partial class MainPage : Page
         }
 
         UpdateVisualState();
+    }
+
+    private void ApplyTheme()
+    {
+        if (App.Window is MainWindow window)
+        {
+            window.ApplyTheme(_settings.Theme);
+        }
+        else
+        {
+            RequestedTheme = _settings.Theme switch
+            {
+                "Light" => ElementTheme.Light,
+                "Dark" => ElementTheme.Dark,
+                _ => ElementTheme.Default,
+            };
+        }
     }
 
     private async Task RememberVaultAsync(string path)
