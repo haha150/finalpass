@@ -1,7 +1,10 @@
 using System.Runtime.InteropServices;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.UI;
 
 namespace Finalpass.App;
 
@@ -49,6 +52,9 @@ public sealed partial class MainWindow : Window
         Activated += MainWindow_Activated;
         Closed += MainWindow_Closed;
         RegisterSystemLockNotifications();
+
+        RootGrid.ActualThemeChanged += (_, _) => UpdateCaptionButtonColors();
+        UpdateCaptionButtonColors();
     }
 
     /// <summary>
@@ -66,6 +72,35 @@ public sealed partial class MainWindow : Window
             "Dark" => ElementTheme.Dark,
             _ => ElementTheme.Default,
         };
+    }
+
+    /// <summary>
+    /// ExtendsContentIntoTitleBar delegates the minimize/maximize/close glyphs to
+    /// AppWindow.TitleBar, which is not part of the XAML visual tree and therefore
+    /// does not pick up ElementTheme automatically. Without this, the buttons stay
+    /// dark and become nearly invisible against a dark title bar background.
+    /// </summary>
+    private void UpdateCaptionButtonColors()
+    {
+        bool isDark = RootGrid.ActualTheme == ElementTheme.Dark;
+        Color foreground = isDark ? Colors.White : Colors.Black;
+        Color inactiveForeground = isDark
+            ? Color.FromArgb(0xFF, 0x9A, 0x9A, 0x9A)
+            : Color.FromArgb(0xFF, 0x6E, 0x6E, 0x6E);
+
+        AppWindowTitleBar titleBar = AppWindow.TitleBar;
+        titleBar.ButtonBackgroundColor = Colors.Transparent;
+        titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        titleBar.ButtonForegroundColor = foreground;
+        titleBar.ButtonInactiveForegroundColor = inactiveForeground;
+        titleBar.ButtonHoverForegroundColor = foreground;
+        titleBar.ButtonHoverBackgroundColor = isDark
+            ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x20, 0x00, 0x00, 0x00);
+        titleBar.ButtonPressedForegroundColor = foreground;
+        titleBar.ButtonPressedBackgroundColor = isDark
+            ? Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x40, 0x00, 0x00, 0x00);
     }
 
     private void RegisterSystemLockNotifications()
