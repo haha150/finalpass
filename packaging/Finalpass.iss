@@ -1,5 +1,5 @@
 #define MyAppName "Finalpass"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "Ali Symeri"
 #define MyAppExeName "Finalpass.exe"
 
