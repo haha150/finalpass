@@ -42,7 +42,7 @@ if the primary vault is damaged.
 
 ## Install as a regular Windows user
 
-Download `Finalpass-0.1.0-win-x64-setup.exe` and `SHA256SUMS.txt` from the
+Download `Finalpass-0.1.1-win-x64-setup.exe` and `SHA256SUMS.txt` from the
 trusted release location, verify the checksum, and double-click the setup file.
 The installer writes only to your `%LocalAppData%\Programs\Finalpass` directory
 and current-user registry keys, so it does not request an administrator account
@@ -53,7 +53,7 @@ show an unknown-publisher warning; only continue after obtaining the file from
 the trusted project release and verifying its SHA-256 checksum. This warning is
 expected for this project's distribution model.
 
-For a portable run, extract `Finalpass-0.1.0-win-x64-portable.zip` somewhere you
+For a portable run, extract `Finalpass-0.1.1-win-x64-portable.zip` somewhere you
 can write to and run `Finalpass.exe`. Uninstalling through **Settings > Apps >
 Installed apps** removes the program but does not delete `.fpass` vaults saved
 in Documents or elsewhere.

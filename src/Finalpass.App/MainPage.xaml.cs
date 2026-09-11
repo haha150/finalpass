@@ -16,12 +16,18 @@ namespace Finalpass.App;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable")]
 public sealed partial class MainPage : Page
 {
+    private const double NavigationPaneMaximumWidth = 480;
+    private const double LoginListMaximumWidth = 800;
+
     private readonly DispatcherTimer _autosaveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer _autoLockTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private DateTimeOffset _lastActivityUtc = DateTimeOffset.UtcNow;
     private AppSettings _settings = new();
     private Task _settingsLoadTask = Task.CompletedTask;
+    private ColumnDefinition? _resizingPaneColumn;
+    private uint _resizingPointerId;
+    private double _lastResizePointerX;
     private int _systemLockInProgress;
 
     public MainPageViewModel ViewModel { get; } = new();
@@ -38,6 +44,102 @@ public sealed partial class MainPage : Page
         Unloaded += MainPage_Unloaded;
         UpdateVisualState();
         _settingsLoadTask = LoadSettingsAsync();
+    }
+
+    private void PaneSplitter_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not UIElement splitter)
+        {
+            return;
+        }
+
+        ColumnDefinition? paneColumn = ReferenceEquals(splitter, NavigationPaneSplitter)
+            ? NavigationPaneColumn
+            : ReferenceEquals(splitter, LoginListSplitter)
+                ? LoginListColumn
+                : null;
+        if (paneColumn is null ||
+            !e.GetCurrentPoint(splitter).Properties.IsLeftButtonPressed ||
+            !splitter.CapturePointer(e.Pointer))
+        {
+            return;
+        }
+
+        _resizingPaneColumn = paneColumn;
+        _resizingPointerId = e.Pointer.PointerId;
+        _lastResizePointerX = e.GetCurrentPoint(VaultPanel).Position.X;
+        _lastActivityUtc = DateTimeOffset.UtcNow;
+        e.Handled = true;
+    }
+
+    private void PaneSplitter_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not UIElement splitter ||
+            _resizingPaneColumn is null ||
+            e.Pointer.PointerId != _resizingPointerId)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(VaultPanel);
+        if (!point.Properties.IsLeftButtonPressed)
+        {
+            splitter.ReleasePointerCapture(e.Pointer);
+            ResetPaneResize();
+            return;
+        }
+
+        double delta = point.Position.X - _lastResizePointerX;
+        double maximumWidth = GetPaneMaximumWidth(_resizingPaneColumn);
+        double width = Math.Clamp(
+            _resizingPaneColumn.ActualWidth + delta,
+            _resizingPaneColumn.MinWidth,
+            maximumWidth);
+        _resizingPaneColumn.Width = new GridLength(width, GridUnitType.Pixel);
+        _lastResizePointerX = point.Position.X;
+        _lastActivityUtc = DateTimeOffset.UtcNow;
+        e.Handled = true;
+    }
+
+    private void PaneSplitter_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not UIElement splitter || e.Pointer.PointerId != _resizingPointerId)
+        {
+            return;
+        }
+
+        splitter.ReleasePointerCapture(e.Pointer);
+        ResetPaneResize();
+        e.Handled = true;
+    }
+
+    private void PaneSplitter_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+    {
+        if (e.Pointer.PointerId == _resizingPointerId)
+        {
+            ResetPaneResize();
+        }
+    }
+
+    private double GetPaneMaximumWidth(ColumnDefinition paneColumn)
+    {
+        double splitterWidth = NavigationPaneSplitterColumn.ActualWidth +
+            LoginListSplitterColumn.ActualWidth;
+        double availableWidth = ReferenceEquals(paneColumn, NavigationPaneColumn)
+            ? VaultPanel.ActualWidth - LoginListColumn.ActualWidth - EditorPaneColumn.MinWidth - splitterWidth
+            : VaultPanel.ActualWidth - NavigationPaneColumn.ActualWidth - EditorPaneColumn.MinWidth - splitterWidth;
+        double configuredMaximum = ReferenceEquals(paneColumn, NavigationPaneColumn)
+            ? NavigationPaneMaximumWidth
+            : LoginListMaximumWidth;
+
+        return Math.Max(paneColumn.MinWidth, Math.Min(configuredMaximum, availableWidth));
+    }
+
+    private void ResetPaneResize()
+    {
+        _resizingPaneColumn = null;
+        _resizingPointerId = 0;
+        _lastResizePointerX = 0;
     }
 
     private async void NewVault_Click(object sender, RoutedEventArgs e)
