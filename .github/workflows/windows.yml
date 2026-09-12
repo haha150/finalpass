@@ -72,16 +72,16 @@ jobs:
             -b artifacts/publish/win-x64 `
             -bc . `
             -pn Finalpass `
-            -pv 0.1.2 `
+            -pv 0.1.3 `
             -ps "Ali Symeri" `
             -nsb "https://github.com/haha150/finalpass/sbom"
           Copy-Item `
             artifacts/publish/win-x64/_manifest/spdx_2.2/manifest.spdx.json `
-            artifacts/Finalpass-0.1.2.spdx.json
+            artifacts/Finalpass-0.1.3.spdx.json
 
       - name: Create portable archive
         shell: pwsh
-        run: Compress-Archive -Path artifacts/publish/win-x64/* -DestinationPath artifacts/Finalpass-0.1.2-win-x64-portable.zip
+        run: Compress-Archive -Path artifacts/publish/win-x64/* -DestinationPath artifacts/Finalpass-0.1.3-win-x64-portable.zip
 
       - name: Restore verified installer compiler
         shell: pwsh
@@ -93,18 +93,18 @@ jobs:
 
       - name: Smoke-test current-user install, update, association, and uninstall
         shell: pwsh
-        run: ./eng/test-installer.ps1 -InstallerPath artifacts/installer/Finalpass-0.1.2-win-x64-setup.exe
+        run: ./eng/test-installer.ps1 -InstallerPath artifacts/installer/Finalpass-0.1.3-win-x64-setup.exe
 
       - name: Generate SHA-256 checksums
         shell: pwsh
         run: |
           Copy-Item `
-            artifacts/installer/Finalpass-0.1.2-win-x64-setup.exe `
-            artifacts/Finalpass-0.1.2-win-x64-setup.exe
+            artifacts/installer/Finalpass-0.1.3-win-x64-setup.exe `
+            artifacts/Finalpass-0.1.3-win-x64-setup.exe
           $files = @(
-            'artifacts/Finalpass-0.1.2-win-x64-portable.zip',
-            'artifacts/Finalpass-0.1.2-win-x64-setup.exe',
-            'artifacts/Finalpass-0.1.2.spdx.json'
+            'artifacts/Finalpass-0.1.3-win-x64-portable.zip',
+            'artifacts/Finalpass-0.1.3-win-x64-setup.exe',
+            'artifacts/Finalpass-0.1.3.spdx.json'
           )
           $artifactRoot = (Resolve-Path 'artifacts').Path
           $lines = foreach ($file in $files) {
@@ -121,8 +121,8 @@ jobs:
         with:
           name: Finalpass-win-x64
           path: |
-            artifacts/Finalpass-0.1.2-win-x64-portable.zip
-            artifacts/Finalpass-0.1.2-win-x64-setup.exe
-            artifacts/Finalpass-0.1.2.spdx.json
+            artifacts/Finalpass-0.1.3-win-x64-portable.zip
+            artifacts/Finalpass-0.1.3-win-x64-setup.exe
+            artifacts/Finalpass-0.1.3.spdx.json
             artifacts/SHA256SUMS.txt
           if-no-files-found: error
