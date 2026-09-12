@@ -497,7 +497,7 @@ public sealed class MainPageViewModel : ObservableObject, IDisposable
         document.Entries.Add(entry);
         MarkDirty(touchSelectedEntry: false);
         RefreshEntries(entry.Id);
-        StatusText = "New entry added. Save the vault to persist it.";
+        StatusText = "New entry added.";
     }
 
     public void AddCustomField()
@@ -536,7 +536,7 @@ public sealed class MainPageViewModel : ObservableObject, IDisposable
         VaultFolder folder = VaultOperations.AddFolder(document, name, parentId);
         MarkDirty(touchSelectedEntry: false);
         RefreshFolders();
-        StatusText = $"Folder \"{folder.Name}\" created. Save the vault to persist it.";
+        StatusText = $"Folder \"{folder.Name}\" created.";
     }
 
     public void RenameFolder(Guid folderId, string name)
@@ -548,7 +548,7 @@ public sealed class MainPageViewModel : ObservableObject, IDisposable
         MarkDirty(touchSelectedEntry: false);
         RefreshFolders();
         RefreshEntries();
-        StatusText = $"Folder renamed to \"{folder.Name}\". Save the vault to persist it.";
+        StatusText = $"Folder renamed to \"{folder.Name}\".";
     }
 
     public void DeleteFolder(Guid folderId)
@@ -570,8 +570,7 @@ public sealed class MainPageViewModel : ObservableObject, IDisposable
         MarkDirty(touchSelectedEntry: false);
         RefreshFolders();
         RefreshEntries();
-        StatusText = "Folder deleted. Its entries and child folders were kept at the parent level. " +
-            "Save the vault to persist it.";
+        StatusText = "Folder deleted. Its entries and child folders were kept at the parent level.";
     }
 
     public bool ApplyEditor()
@@ -627,7 +626,7 @@ public sealed class MainPageViewModel : ObservableObject, IDisposable
         RequireOpenedVault().Session.Document.Entries.Remove(entry);
         MarkDirty(touchSelectedEntry: false);
         RefreshEntries();
-        StatusText = "Entry deleted. Save the vault to persist the change.";
+        StatusText = "Entry deleted.";
     }
 
     public void CloseVault()

@@ -424,7 +424,7 @@
                         </Border>
 
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="ApplyEntryButton" Content="Apply changes" Style="{StaticResource AccentButtonStyle}" Click="ApplyEntry_Click"
+                            <Button x:Name="ApplyEntryButton" Content="Save entry" Style="{StaticResource AccentButtonStyle}" Click="ApplyEntry_Click"
                                     IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
                             <Button Content="Delete entry" Click="DeleteEntry_Click"
                                     IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />

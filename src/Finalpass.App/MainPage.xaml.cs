@@ -380,10 +380,11 @@ public sealed partial class MainPage : Page
         await OpenVaultPathAsync(path);
     }
 
-    private void AddEntry_Click(object sender, RoutedEventArgs e)
+    private async void AddEntry_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.AddEntry();
         UpdateVisualState();
+        await SaveCurrentAsync();
     }
 
     private async void NewFolder_Click(object sender, RoutedEventArgs e)
@@ -401,6 +402,7 @@ public sealed partial class MainPage : Page
 
         Guid? parentId = ViewModel.SelectedFolder?.Id;
         ViewModel.AddFolder(name, parentId);
+        await SaveCurrentAsync();
     }
 
     private async void RenameFolder_Click(object sender, RoutedEventArgs e)
@@ -418,6 +420,7 @@ public sealed partial class MainPage : Page
         }
 
         ViewModel.RenameFolder(folderId, name);
+        await SaveCurrentAsync();
     }
 
     private async void DeleteFolder_Click(object sender, RoutedEventArgs e)
@@ -433,8 +436,8 @@ public sealed partial class MainPage : Page
             XamlRoot = XamlRoot,
             RequestedTheme = CurrentElementTheme,
             Title = "Delete this folder?",
-            Content = $"“{folder.Name}” will be removed. Its entries and child folders are kept " +
-                "at the parent level when you save the vault.",
+            Content = $"“{folder.Name}” will be removed immediately. Its entries and child folders are kept " +
+                "at the parent level.",
             PrimaryButtonText = "Delete",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
@@ -442,6 +445,7 @@ public sealed partial class MainPage : Page
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
         {
             ViewModel.DeleteFolder(folderId);
+            await SaveCurrentAsync();
         }
     }
 
@@ -468,11 +472,11 @@ public sealed partial class MainPage : Page
         return result == ContentDialogResult.Primary ? nameBox.Text.Trim() : null;
     }
 
-    private void ApplyEntry_Click(object sender, RoutedEventArgs e)
+    private async void ApplyEntry_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.ApplyEditor())
+        if (await SaveCurrentAsync())
         {
-            ViewModel.StatusText = "Entry changes applied. Save the vault to persist them.";
+            ShowActionFeedback("Entry saved", "\uE74E", ApplyEntryButton);
         }
 
         UpdateVisualState();
@@ -490,7 +494,7 @@ public sealed partial class MainPage : Page
             XamlRoot = XamlRoot,
             RequestedTheme = CurrentElementTheme,
             Title = "Delete this entry?",
-            Content = $"“{ViewModel.SelectedEntry.Title}” will be removed when you save the vault.",
+            Content = $"“{ViewModel.SelectedEntry.Title}” will be removed immediately.",
             PrimaryButtonText = "Delete",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
@@ -499,6 +503,7 @@ public sealed partial class MainPage : Page
         {
             ViewModel.DeleteSelected();
             UpdateVisualState();
+            await SaveCurrentAsync();
         }
     }
 
