@@ -22,6 +22,8 @@ public sealed partial class MainWindow : Window
     private const nuint WtsSessionLock = 0x0007;
     private const uint NotifyForThisSession = 0;
     private const nuint SubclassId = 0x46504153;
+    private const int MinimumWindowWidth = 840;
+    private const int MinimumWindowHeight = 520;
 
     private bool _closeConfirmed;
     private bool _initialFileHandled;
@@ -37,6 +39,11 @@ public sealed partial class MainWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        if (AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.PreferredMinimumWidth = MinimumWindowWidth;
+            presenter.PreferredMinimumHeight = MinimumWindowHeight;
+        }
 
         string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
         AppWindow.SetIcon(iconPath);
@@ -72,6 +79,14 @@ public sealed partial class MainWindow : Window
             "Dark" => ElementTheme.Dark,
             _ => ElementTheme.Default,
         };
+    }
+
+    private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (RootFrame.Content is MainPage page)
+        {
+            page.ConstrainPanesToWidth(e.NewSize.Width);
+        }
     }
 
     /// <summary>

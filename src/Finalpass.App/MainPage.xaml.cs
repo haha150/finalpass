@@ -29,7 +29,7 @@ public sealed partial class MainPage : Page
     private ColumnDefinition? _resizingPaneColumn;
     private uint _resizingPointerId;
     private double _lastResizePointerX;
-    private int _systemLockInProgress;
+    private int _securityLockInProgress;
 
     public MainPageViewModel ViewModel { get; } = new();
 
@@ -149,6 +149,54 @@ public sealed partial class MainPage : Page
         _resizingPointerId = 0;
         _lastResizePointerX = 0;
     }
+
+    public void ConstrainPanesToWidth(double availableWidth)
+    {
+        double splitterWidth = NavigationPaneSplitterColumn.Width.Value +
+            LoginListSplitterColumn.Width.Value;
+        double minimumPaneWidth = NavigationPaneColumn.MinWidth + LoginListColumn.MinWidth;
+        double minimumLayoutWidth = minimumPaneWidth + EditorPaneColumn.MinWidth + splitterWidth;
+        if (availableWidth < minimumLayoutWidth)
+        {
+            // The native window minimum prevents a user-driven size below this
+            // point. Ignore transient zero-size layout passes while the window is
+            // being initialized.
+            return;
+        }
+
+        double availablePaneWidth = Math.Max(
+            minimumPaneWidth,
+            availableWidth - EditorPaneColumn.MinWidth - splitterWidth);
+
+        double navigationWidth = GetCurrentColumnWidth(NavigationPaneColumn);
+        double loginListWidth = GetCurrentColumnWidth(LoginListColumn);
+        double combinedWidth = navigationWidth + loginListWidth;
+        if (combinedWidth <= availablePaneWidth)
+        {
+            return;
+        }
+
+        double navigationExcess = navigationWidth - NavigationPaneColumn.MinWidth;
+        double loginListExcess = loginListWidth - LoginListColumn.MinWidth;
+        double totalExcess = navigationExcess + loginListExcess;
+        if (totalExcess <= 0)
+        {
+            return;
+        }
+
+        double requiredReduction = combinedWidth - availablePaneWidth;
+        double navigationReduction = requiredReduction * navigationExcess / totalExcess;
+        double loginListReduction = requiredReduction - navigationReduction;
+        NavigationPaneColumn.Width = new GridLength(
+            Math.Max(NavigationPaneColumn.MinWidth, navigationWidth - navigationReduction),
+            GridUnitType.Pixel);
+        LoginListColumn.Width = new GridLength(
+            Math.Max(LoginListColumn.MinWidth, loginListWidth - loginListReduction),
+            GridUnitType.Pixel);
+    }
+
+    private static double GetCurrentColumnWidth(ColumnDefinition column) =>
+        column.ActualWidth > 0 ? column.ActualWidth : column.Width.Value;
 
     private async void NewVault_Click(object sender, RoutedEventArgs e)
     {
@@ -893,6 +941,7 @@ public sealed partial class MainPage : Page
             return false;
         }
 
+        Exception? failure = null;
         await _saveGate.WaitAsync();
         try
         {
@@ -909,14 +958,16 @@ public sealed partial class MainPage : Page
         }
         catch (Exception exception)
         {
-            await ShowErrorAsync("The vault could not be saved", exception);
-            return false;
+            failure = exception;
         }
         finally
         {
             IsEnabled = true;
             _saveGate.Release();
         }
+
+        await ShowErrorAsync("The vault could not be saved", failure!);
+        return false;
     }
 
     public async Task<bool> PrepareToCloseAsync()
@@ -1198,18 +1249,16 @@ public sealed partial class MainPage : Page
         }
 
         _autoLockTimer.Stop();
-        if (ViewModel.IsDirty && !await SaveCurrentAsync())
+        try
         {
-            _lastActivityUtc = DateTimeOffset.UtcNow;
-            _autoLockTimer.Start();
-            return;
+            string minuteLabel = _settings.IdleLockMinutes == 1 ? "minute" : "minutes";
+            await LockForSecurityEventAsync(
+                $"Vault locked after {_settings.IdleLockMinutes} {minuteLabel} of inactivity.");
         }
-
-        ViewModel.CloseVault();
-        await ClearClipboardSafelyAsync();
-        UpdateVisualState();
-        ViewModel.StatusText = $"Vault locked after {_settings.IdleLockMinutes} minutes of inactivity.";
-        _autoLockTimer.Start();
+        finally
+        {
+            _autoLockTimer.Start();
+        }
     }
 
     private void Page_PointerMoved(object sender, PointerRoutedEventArgs e) =>
@@ -1289,46 +1338,69 @@ public sealed partial class MainPage : Page
         }
     }
 
-    public async Task LockForSystemEventAsync(string reason)
+    public Task LockForSystemEventAsync(string reason) =>
+        LockForSecurityEventAsync($"Vault locked because Windows {reason}.");
+
+    private async Task LockForSecurityEventAsync(string statusText)
     {
-        if (!ViewModel.IsVaultOpen || Interlocked.Exchange(ref _systemLockInProgress, 1) != 0)
+        if (!ViewModel.IsVaultOpen || Interlocked.Exchange(ref _securityLockInProgress, 1) != 0)
         {
             return;
         }
 
         try
         {
-            if (ViewModel.IsWritable && ViewModel.IsDirty)
+            bool saved = await TrySaveBeforeSecurityLockAsync();
+            if (ViewModel.IsVaultOpen)
             {
-                await _saveGate.WaitAsync();
-                try
-                {
-                    if (ViewModel.ApplyEditor())
-                    {
-                        await VaultFileService.SaveAsync(ViewModel.RequireOpenedVault());
-                        ViewModel.MarkSaved();
-                    }
-                }
-                catch
-                {
-                    // System lock and suspend must discard decrypted state even if
-                    // the last autosave cannot complete. The previous encrypted
-                    // vault remains protected by the atomic save path.
-                }
-                finally
-                {
-                    _saveGate.Release();
-                }
+                ViewModel.CloseVault();
             }
 
-            ViewModel.CloseVault();
             await ClearClipboardSafelyAsync();
             UpdateVisualState();
-            ViewModel.StatusText = $"Vault locked because Windows {reason}.";
+            ViewModel.StatusText = saved
+                ? statusText
+                : $"{statusText} Unsaved changes could not be stored and were discarded.";
         }
         finally
         {
-            Interlocked.Exchange(ref _systemLockInProgress, 0);
+            Interlocked.Exchange(ref _securityLockInProgress, 0);
+        }
+    }
+
+    private async Task<bool> TrySaveBeforeSecurityLockAsync()
+    {
+        if (!ViewModel.IsWritable || !ViewModel.IsDirty)
+        {
+            return true;
+        }
+
+        await _saveGate.WaitAsync();
+        try
+        {
+            if (!ViewModel.IsVaultOpen || !ViewModel.IsWritable || !ViewModel.IsDirty)
+            {
+                return true;
+            }
+
+            if (!ViewModel.ApplyEditor())
+            {
+                return false;
+            }
+
+            await VaultFileService.SaveAsync(ViewModel.RequireOpenedVault());
+            ViewModel.MarkSaved();
+            return true;
+        }
+        catch
+        {
+            // Security-triggered locking must always discard decrypted state. The
+            // previous encrypted generation remains protected by the atomic save path.
+            return false;
+        }
+        finally
+        {
+            _saveGate.Release();
         }
     }
 

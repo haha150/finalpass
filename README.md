@@ -25,8 +25,9 @@ desktop application is built with C#/.NET 10 and WinUI 3.
   cleared after the user-configured interval.
 - Keyboard commands for save, open, new vault, lock, search, and credential
   copying, plus safe `http`/`https` website launching.
-- Debounced autosave, a configurable idle lock, and immediate locking on
-  Windows workstation lock or suspend.
+- Immediate encrypted saves for completed entry and folder actions, an explicit
+  save for edits still in progress, a configurable idle lock, and immediate
+  locking on Windows workstation lock or suspend.
 - System, light, and dark appearance modes with a per-user saved preference.
 - A locked vault can be reopened from the welcome screen using its remembered
   local path; the master password is never stored.
