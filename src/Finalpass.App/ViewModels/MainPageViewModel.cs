@@ -1,19 +1,66 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Finalpass.Core;
 using Finalpass.Infrastructure;
+using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace Finalpass.App.ViewModels;
 
 public sealed class VaultEntryListItem(VaultEntry entry, string folderPath)
 {
+    // A small, fixed accent palette so entries get a stable, visually
+    // distinct avatar color without needing full theme-color generation.
+    private static readonly Color[] AvatarPalette =
+    [
+        Color.FromArgb(255, 0x6B, 0x8E, 0xF2),
+        Color.FromArgb(255, 0xF2, 0x6B, 0x8E),
+        Color.FromArgb(255, 0x6B, 0xF2, 0xA9),
+        Color.FromArgb(255, 0xF2, 0xA9, 0x6B),
+        Color.FromArgb(255, 0xA9, 0x6B, 0xF2),
+        Color.FromArgb(255, 0x6B, 0xD3, 0xF2),
+        Color.FromArgb(255, 0xF2, 0xD3, 0x6B),
+        Color.FromArgb(255, 0xD3, 0x6B, 0xF2),
+    ];
+
     public VaultEntry Entry { get; } = entry;
     public Guid Id => Entry.Id;
     public string Title => Entry.Title;
     public string Username => Entry.Username;
     public string FolderPath { get; } = folderPath;
-    public string FavoriteGlyph => Entry.Favorite ? "\uE735" : string.Empty;
+    public string FavoriteGlyph => Entry.Favorite ? "\uE735" : "\uE734";
+
+    public SolidColorBrush FavoriteBrush => Entry.Favorite
+        ? new SolidColorBrush(Color.FromArgb(255, 0xFF, 0xB9, 0x00))
+        : new SolidColorBrush(Color.FromArgb(0x40, 0x80, 0x80, 0x80));
+
+    public string Initial
+    {
+        get
+        {
+            string trimmed = Entry.Title.TrimStart();
+            return trimmed.Length == 0
+                ? "?"
+                : trimmed[0].ToString(CultureInfo.InvariantCulture).ToUpperInvariant();
+        }
+    }
+
+    public SolidColorBrush AvatarBrush
+    {
+        get
+        {
+            int hash = 0;
+            foreach (char character in Entry.Title)
+            {
+                hash = (hash * 31) + character;
+            }
+
+            Color color = AvatarPalette[(int)((uint)hash % AvatarPalette.Length)];
+            return new SolidColorBrush(color);
+        }
+    }
 }
 
 /// <summary>

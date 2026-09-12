@@ -33,35 +33,27 @@
                 Background="{ThemeResource LayerFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="4">
-                <Button MinWidth="0" Padding="10,7" Click="NewVault_Click" ToolTipService.ToolTip="Create a new vault">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <FontIcon Glyph="&#xE710;" FontSize="14" />
-                        <TextBlock Text="New vault" />
-                    </StackPanel>
+                <Button MinWidth="40" Height="36" Padding="8" Click="NewVault_Click" ToolTipService.ToolTip="Create a new vault"
+                        AutomationProperties.Name="Create a new vault">
+                    <FontIcon Glyph="&#xE710;" FontSize="16" />
                 </Button>
-                <Button MinWidth="0" Padding="10,7" Click="OpenVault_Click" ToolTipService.ToolTip="Open a vault file">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <SymbolIcon Symbol="OpenFile" />
-                        <TextBlock Text="Open vault" />
-                    </StackPanel>
+                <Button MinWidth="40" Height="36" Padding="8" Click="OpenVault_Click" ToolTipService.ToolTip="Open a vault file"
+                        AutomationProperties.Name="Open a vault file">
+                    <FontIcon Glyph="&#xE8E5;" FontSize="16" />
                 </Button>
-                <Button x:Name="SaveButton" MinWidth="0" Padding="10,7" Click="SaveVault_Click" ToolTipService.ToolTip="Save vault">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <SymbolIcon Symbol="Save" />
-                        <TextBlock Text="Save" />
-                    </StackPanel>
+                <Button x:Name="SaveButton" MinWidth="40" Height="36" Padding="8" Click="SaveVault_Click" ToolTipService.ToolTip="Save vault"
+                        AutomationProperties.Name="Save vault">
+                    <FontIcon Glyph="&#xE74E;" FontSize="16" />
                 </Button>
-                <Button x:Name="LockButton" MinWidth="0" Padding="10,7" Click="LockVault_Click" ToolTipService.ToolTip="Lock vault">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <FontIcon Glyph="&#xE72E;" FontSize="14" />
-                        <TextBlock Text="Lock" />
-                    </StackPanel>
+                <Button x:Name="LockButton" MinWidth="40" Height="36" Padding="8" Click="LockVault_Click" ToolTipService.ToolTip="Lock vault"
+                        AutomationProperties.Name="Lock vault">
+                    <FontIcon Glyph="&#xE72E;" FontSize="16" />
                 </Button>
-                <Button MinWidth="0" Padding="10,7" ToolTipService.ToolTip="More actions">
+                <Button MinWidth="40" Height="36" Padding="8" ToolTipService.ToolTip="More actions" AutomationProperties.Name="More actions">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedLeft">
                             <MenuFlyoutItem x:Name="BackupButton" Text="Backup" Click="BackupVault_Click">
-                                <MenuFlyoutItem.Icon><SymbolIcon Symbol="Save" /></MenuFlyoutItem.Icon>
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74E;" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
                             <MenuFlyoutItem x:Name="ChangePasswordButton" Text="Change master password…" Click="ChangeMasterPassword_Click">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72E;" /></MenuFlyoutItem.Icon>
@@ -75,10 +67,7 @@
                             </MenuFlyoutItem>
                         </MenuFlyout>
                     </Button.Flyout>
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <FontIcon Glyph="&#xE712;" FontSize="14" />
-                        <TextBlock Text="More" />
-                    </StackPanel>
+                    <FontIcon Glyph="&#xE712;" FontSize="16" />
                 </Button>
             </StackPanel>
         </Border>
@@ -134,6 +123,15 @@
                         <ListView x:Name="FolderListView" MaxHeight="180" Padding="0"
                                   ItemsSource="{x:Bind ViewModel.Folders}"
                                   SelectedItem="{x:Bind ViewModel.SelectedFolder, Mode=TwoWay}" SelectionMode="Single">
+                            <ListView.Resources>
+                                <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
+                            </ListView.Resources>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Margin" Value="0,1" />
+                                    <Setter Property="MinHeight" Value="34" />
+                                </Style>
+                            </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="vm:FolderListItem">
                                     <TextBlock Text="{x:Bind DisplayName}" TextTrimming="CharacterEllipsis" />
@@ -231,6 +229,14 @@
                 </Grid>
                 <ListView Grid.Row="2" ItemsSource="{x:Bind ViewModel.Entries, Mode=OneWay}"
                           SelectedItem="{x:Bind ViewModel.SelectedEntry, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView.Resources>
+                        <CornerRadius x:Key="ControlCornerRadius">10</CornerRadius>
+                    </ListView.Resources>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Margin" Value="0,2" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="vm:VaultEntryListItem">
                             <Grid Padding="8" ColumnSpacing="10">
@@ -250,15 +256,17 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource AccentFillColorSecondaryBrush}">
-                                    <FontIcon Glyph="&#xE8D7;" FontSize="16" />
+                                <Border Width="36" Height="36" CornerRadius="18" Background="{x:Bind AvatarBrush}">
+                                    <TextBlock Text="{x:Bind Initial}" FontSize="15" FontWeight="SemiBold"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                     <TextBlock Text="{x:Bind Username}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
-                                <FontIcon Grid.Column="2" Glyph="{x:Bind FavoriteGlyph}" FontSize="12" />
+                                <FontIcon Grid.Column="2" Glyph="{x:Bind FavoriteGlyph}" FontSize="14"
+                                          Foreground="{x:Bind FavoriteBrush}" />
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -277,9 +285,12 @@
             </controls:HorizontalResizeGrid>
 
             <Grid Grid.Column="4" Padding="28">
-                <TextBlock x:Name="NoSelectionText" Text="Select an entry or create a new login."
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <StackPanel x:Name="NoSelectionPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <FontIcon Glyph="&#xE8FD;" FontSize="32" HorizontalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="Select an entry or create a new login." HorizontalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
                 <ScrollViewer x:Name="EditorPanel" Visibility="Collapsed"
                               HorizontalContentAlignment="Stretch"
                               HorizontalScrollMode="Disabled"
@@ -289,107 +300,140 @@
                         <InfoBar Title="Read-only vault" Severity="Warning" IsClosable="False"
                                  IsOpen="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
                                  Message="Another Finalpass process is editing this file. You can view and copy entries, but changes are disabled." />
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBox Header="Title" MaxLength="512" IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
-                                     Text="{Binding EntryTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <ToggleButton Grid.Column="1" Margin="0,22,0,0" Width="40"
-                                          IsChecked="{Binding Favorite, Mode=TwoWay}" IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}"
-                                          ToolTipService.ToolTip="Favorite" AutomationProperties.Name="Mark as favorite">
-                                <FontIcon Glyph="&#xE735;" FontSize="14" />
-                            </ToggleButton>
-                        </Grid>
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBox Header="Username" MaxLength="4096" IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
-                                     Text="{Binding Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <Button Grid.Column="1" Margin="0,22,0,0" Click="CopyUsername_Click"
-                                    ToolTipService.ToolTip="Copy username (Ctrl+Shift+U)" AutomationProperties.Name="Copy username">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14" />
-                            </Button>
-                        </Grid>
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <PasswordBox Header="Password" MaxLength="16384" Password="{Binding Password, Mode=TwoWay}" PasswordRevealMode="Peek"
-                                         IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
-                            <Button Grid.Column="1" Margin="0,22,0,0" Click="GeneratePassword_Click"
-                                    IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" ToolTipService.ToolTip="Generate password or passphrase"
-                                    AutomationProperties.Name="Generate password or passphrase">
-                                <FontIcon Glyph="&#xE8B1;" FontSize="14" />
-                            </Button>
-                            <Button Grid.Column="2" Margin="0,22,0,0" Click="CopyPassword_Click"
-                                    ToolTipService.ToolTip="Copy password (Ctrl+Shift+P)" AutomationProperties.Name="Copy password">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14" />
-                            </Button>
-                        </Grid>
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBox Header="Website" MaxLength="8192" IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
-                                     Text="{Binding Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <Button Grid.Column="1" Margin="0,22,0,0" Click="OpenWebsite_Click"
-                                    ToolTipService.ToolTip="Open website" AutomationProperties.Name="Open website in default browser">
-                                <FontIcon Glyph="&#xE8A7;" FontSize="14" />
-                            </Button>
-                        </Grid>
-                        <ComboBox Header="Folder" HorizontalAlignment="Stretch"
-                                  IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}"
-                                  ItemsSource="{Binding FolderOptions}"
-                                  DisplayMemberPath="DisplayName"
-                                  SelectedItem="{Binding SelectedFolderOption, Mode=TwoWay}" />
-                        <TextBox Header="Tags" MaxLength="16384" PlaceholderText="work, email, finance"
-                                 IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
-                                 Text="{Binding TagsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBox Header="Notes" MaxLength="1048576" Text="{Binding Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
-                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
-                        <StackPanel Spacing="8">
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Custom fields" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <Button Grid.Column="1" Content="Add field" Click="AddCustomField_Click"
-                                        IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
-                            </Grid>
-                            <ItemsControl ItemsSource="{x:Bind ViewModel.CustomFields}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:CustomFieldItem">
-                                        <Grid ColumnSpacing="8" Margin="0,0,0,8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="140" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox PlaceholderText="Name" MaxLength="256" IsReadOnly="{x:Bind IsReadOnly, Mode=OneWay}"
-                                                     Text="{x:Bind Name, Mode=TwoWay}" />
-                                            <TextBox Grid.Column="1" PlaceholderText="Value" MaxLength="65536"
-                                                     IsReadOnly="{x:Bind IsReadOnly, Mode=OneWay}"
-                                                     Text="{x:Bind Value, Mode=TwoWay}"
-                                                     Visibility="{x:Bind NotSecret, Mode=OneWay}" />
-                                            <PasswordBox Grid.Column="1" PlaceholderText="Value" MaxLength="65536" PasswordRevealMode="Peek"
-                                                         IsEnabled="{x:Bind IsWritable, Mode=OneWay}"
-                                                         Password="{x:Bind Value, Mode=TwoWay}"
-                                                         Visibility="{x:Bind Secret, Mode=OneWay}" />
-                                            <CheckBox Grid.Column="2" Content="Secret" IsChecked="{x:Bind Secret, Mode=TwoWay}"
-                                                      IsEnabled="{x:Bind IsWritable, Mode=OneWay}" />
-                                            <Button Grid.Column="3" Click="RemoveCustomField_Click" ToolTipService.ToolTip="Remove field"
-                                                    IsEnabled="{x:Bind IsWritable, Mode=OneWay}" AutomationProperties.Name="Remove custom field">
-                                                <FontIcon Glyph="&#xE711;" FontSize="12" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="16">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="Login" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBox Header="Title" MaxLength="512" IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
+                                             Text="{Binding EntryTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ToggleButton Grid.Column="1" Margin="0,22,0,0" Width="40"
+                                                  IsChecked="{Binding Favorite, Mode=TwoWay}" IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}"
+                                                  ToolTipService.ToolTip="Favorite" AutomationProperties.Name="Mark as favorite">
+                                        <FontIcon Glyph="&#xE735;" FontSize="14" />
+                                    </ToggleButton>
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBox Header="Username" MaxLength="4096" IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
+                                             Text="{Binding Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Button Grid.Column="1" Margin="0,22,0,0" Click="CopyUsername_Click"
+                                            ToolTipService.ToolTip="Copy username (Ctrl+Shift+U)" AutomationProperties.Name="Copy username">
+                                        <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <PasswordBox Header="Password" MaxLength="16384" Password="{Binding Password, Mode=TwoWay}" PasswordRevealMode="Peek"
+                                                 IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
+                                    <Button Grid.Column="1" Margin="0,22,0,0" Click="GeneratePassword_Click"
+                                            IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" ToolTipService.ToolTip="Generate password or passphrase"
+                                            AutomationProperties.Name="Generate password or passphrase">
+                                        <FontIcon Glyph="&#xE8B1;" FontSize="14" />
+                                    </Button>
+                                    <Button Grid.Column="2" Margin="0,22,0,0" x:Name="CopyPasswordButton" Click="CopyPassword_Click"
+                                            ToolTipService.ToolTip="Copy password (Ctrl+Shift+P)" AutomationProperties.Name="Copy password">
+                                        <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBox Header="Website" MaxLength="8192" IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
+                                             Text="{Binding Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Button Grid.Column="1" Margin="0,22,0,0" Click="OpenWebsite_Click"
+                                            ToolTipService.ToolTip="Open website" AutomationProperties.Name="Open website in default browser">
+                                        <FontIcon Glyph="&#xE8A7;" FontSize="14" />
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="16">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="Organization" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <ComboBox Header="Folder" HorizontalAlignment="Stretch"
+                                          IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}"
+                                          ItemsSource="{Binding FolderOptions}"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectedItem="{Binding SelectedFolderOption, Mode=TwoWay}" />
+                                <TextBox Header="Tags" MaxLength="16384" PlaceholderText="work, email, finance"
+                                         IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
+                                         Text="{Binding TagsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="16">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="Notes" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBox Text="{Binding Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         IsReadOnly="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
+                                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="16">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="Custom fields" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <Button Grid.Column="1" Content="Add field" Click="AddCustomField_Click"
+                                            IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
+                                </Grid>
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.CustomFields}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:CustomFieldItem">
+                                            <Grid ColumnSpacing="8" Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="140" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox PlaceholderText="Name" MaxLength="256" IsReadOnly="{x:Bind IsReadOnly, Mode=OneWay}"
+                                                         Text="{x:Bind Name, Mode=TwoWay}" />
+                                                <TextBox Grid.Column="1" PlaceholderText="Value" MaxLength="65536"
+                                                         IsReadOnly="{x:Bind IsReadOnly, Mode=OneWay}"
+                                                         Text="{x:Bind Value, Mode=TwoWay}"
+                                                         Visibility="{x:Bind NotSecret, Mode=OneWay}" />
+                                                <PasswordBox Grid.Column="1" PlaceholderText="Value" MaxLength="65536" PasswordRevealMode="Peek"
+                                                             IsEnabled="{x:Bind IsWritable, Mode=OneWay}"
+                                                             Password="{x:Bind Value, Mode=TwoWay}"
+                                                             Visibility="{x:Bind Secret, Mode=OneWay}" />
+                                                <CheckBox Grid.Column="2" Content="Secret" IsChecked="{x:Bind Secret, Mode=TwoWay}"
+                                                          IsEnabled="{x:Bind IsWritable, Mode=OneWay}" />
+                                                <Button Grid.Column="3" Click="RemoveCustomField_Click" ToolTipService.ToolTip="Remove field"
+                                                        IsEnabled="{x:Bind IsWritable, Mode=OneWay}" AutomationProperties.Name="Remove custom field">
+                                                    <FontIcon Glyph="&#xE711;" FontSize="12" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="Apply changes" Style="{StaticResource AccentButtonStyle}" Click="ApplyEntry_Click"
+                            <Button x:Name="ApplyEntryButton" Content="Apply changes" Style="{StaticResource AccentButtonStyle}" Click="ApplyEntry_Click"
                                     IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
                             <Button Content="Delete entry" Click="DeleteEntry_Click"
                                     IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+
+                <TeachingTip x:Name="ActionFeedbackTip" Target="{x:Bind ApplyEntryButton}"
+                             PreferredPlacement="Top" IsLightDismissEnabled="True" ActionButtonContent="" />
             </Grid>
         </Grid>
 

@@ -21,6 +21,7 @@ public sealed partial class MainPage : Page
     private const double LoginListMaximumWidth = 800;
 
     private readonly DispatcherTimer _autoLockTimer = new() { Interval = TimeSpan.FromSeconds(15) };
+    private readonly DispatcherTimer _actionFeedbackTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private DateTimeOffset _lastActivityUtc = DateTimeOffset.UtcNow;
     private AppSettings _settings = new();
@@ -40,6 +41,7 @@ public sealed partial class MainPage : Page
         ViewModel.VaultChanged += ViewModel_VaultChanged;
         _autoLockTimer.Tick += AutoLockTimer_Tick;
         _autoLockTimer.Start();
+        _actionFeedbackTimer.Tick += ActionFeedbackTimer_Tick;
         Loaded += MainPage_Loaded;
         Unloaded += MainPage_Unloaded;
         UpdateVisualState();
@@ -268,8 +270,13 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private async void SaveVault_Click(object sender, RoutedEventArgs e) =>
-        await SaveCurrentAsync();
+    private async void SaveVault_Click(object sender, RoutedEventArgs e)
+    {
+        if (await SaveCurrentAsync())
+        {
+            ShowActionFeedback("Vault saved", "\uE74E", SaveButton);
+        }
+    }
 
     private async void BackupVault_Click(object sender, RoutedEventArgs e)
     {
@@ -654,10 +661,10 @@ public sealed partial class MainPage : Page
     }
 
     private void CopyUsername_Click(object sender, RoutedEventArgs e) =>
-        CopyToClipboard(ViewModel.Username, "Username");
+        CopyToClipboard(ViewModel.Username, "Username", sender as FrameworkElement);
 
     private void CopyPassword_Click(object sender, RoutedEventArgs e) =>
-        CopyToClipboard(ViewModel.Password, "Password");
+        CopyToClipboard(ViewModel.Password, "Password", sender as FrameworkElement);
 
     private void CopyEntryUsername_Click(object sender, RoutedEventArgs e)
     {
@@ -1106,7 +1113,7 @@ public sealed partial class MainPage : Page
         return change;
     }
 
-    private void CopyToClipboard(string value, string label)
+    private void CopyToClipboard(string value, string label, FrameworkElement? target = null)
     {
         if (string.IsNullOrEmpty(value))
         {
@@ -1120,11 +1127,32 @@ public sealed partial class MainPage : Page
             SecureClipboard.Copy(value, clearAfter);
             ViewModel.StatusText = $"{label} copied. It will be cleared after " +
                 $"{_settings.ClipboardClearSeconds} seconds if unchanged.";
+            if (target is not null)
+            {
+                ShowActionFeedback($"{label} copied", "\uE8C8", target);
+            }
         }
         catch (Exception exception)
         {
             ViewModel.StatusText = $"Clipboard error: {exception.Message}";
         }
+    }
+
+    private void ShowActionFeedback(string message, string glyph, FrameworkElement target)
+    {
+        ActionFeedbackTip.Target = target;
+        ActionFeedbackTip.IconSource = new FontIconSource { Glyph = glyph };
+        ActionFeedbackTip.Title = message;
+        ActionFeedbackTip.IsOpen = false;
+        ActionFeedbackTip.IsOpen = true;
+        _actionFeedbackTimer.Stop();
+        _actionFeedbackTimer.Start();
+    }
+
+    private void ActionFeedbackTimer_Tick(object? sender, object e)
+    {
+        _actionFeedbackTimer.Stop();
+        ActionFeedbackTip.IsOpen = false;
     }
 
     private async Task ShowErrorAsync(string title, Exception exception)
@@ -1190,9 +1218,9 @@ public sealed partial class MainPage : Page
         KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        if (ViewModel.IsWritable)
+        if (ViewModel.IsWritable && await SaveCurrentAsync())
         {
-            await SaveCurrentAsync();
+            ShowActionFeedback("Vault saved", "\uE74E", SaveButton);
         }
     }
 
@@ -1383,6 +1411,8 @@ public sealed partial class MainPage : Page
         ViewModel.VaultChanged -= ViewModel_VaultChanged;
         _autoLockTimer.Stop();
         _autoLockTimer.Tick -= AutoLockTimer_Tick;
+        _actionFeedbackTimer.Stop();
+        _actionFeedbackTimer.Tick -= ActionFeedbackTimer_Tick;
         ViewModel.Dispose();
         _saveGate.Dispose();
         await ClearClipboardSafelyAsync();
@@ -1407,7 +1437,7 @@ public sealed partial class MainPage : Page
         NewFolderButton.IsEnabled = isWritable;
         bool hasSelection = ViewModel.SelectedEntry is not null;
         EditorPanel.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
-        NoSelectionText.Visibility = hasSelection ? Visibility.Collapsed : Visibility.Visible;
+        NoSelectionPanel.Visibility = hasSelection ? Visibility.Collapsed : Visibility.Visible;
         bool hasRealFolderSelected = ViewModel.SelectedFolder?.Id is not null;
         RenameFolderButton.IsEnabled = isWritable && hasRealFolderSelected;
         DeleteFolderButton.IsEnabled = isWritable && hasRealFolderSelected;
