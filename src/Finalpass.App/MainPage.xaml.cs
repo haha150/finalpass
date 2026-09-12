@@ -6,6 +6,7 @@ using Finalpass.Infrastructure;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
@@ -802,6 +803,74 @@ public sealed partial class MainPage : Page
         {
             ViewModel.StatusText = "Settings saved for this Windows user.";
         }
+    }
+
+    private async void KeyboardShortcuts_Click(object sender, RoutedEventArgs e)
+    {
+        StackPanel content = new() { Spacing = 12, MinWidth = 380 };
+        content.Children.Add(BuildShortcutGroup(
+            "Vault",
+            ("Ctrl+N", "New vault"),
+            ("Ctrl+O", "Open vault"),
+            ("Ctrl+S", "Save vault"),
+            ("Ctrl+L", "Lock vault")));
+        content.Children.Add(BuildShortcutGroup(
+            "Entries",
+            ("Ctrl+F", "Search"),
+            ("Ctrl+Shift+U", "Copy username of the open entry"),
+            ("Ctrl+Shift+P", "Copy password of the open entry")));
+        content.Children.Add(new TextBlock
+        {
+            Text = "Tip: right-click any login in the list to copy its username or " +
+                "password without opening it.",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = $"Copied values are automatically cleared from the clipboard after " +
+                $"{_settings.ClipboardClearSeconds} seconds (configurable in Settings), and are " +
+                "excluded from clipboard history and roaming.",
+            TextWrapping = TextWrapping.Wrap,
+        });
+
+        ContentDialog dialog = new()
+        {
+            XamlRoot = XamlRoot,
+            RequestedTheme = CurrentElementTheme,
+            Title = "Keyboard shortcuts",
+            Content = new ScrollViewer { Content = content },
+            CloseButtonText = "Close",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        await dialog.ShowAsync();
+    }
+
+    private static StackPanel BuildShortcutGroup(string header, params (string Keys, string Description)[] rows)
+    {
+        StackPanel group = new() { Spacing = 4 };
+        group.Children.Add(new TextBlock
+        {
+            Text = header,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        });
+
+        foreach ((string keys, string description) in rows)
+        {
+            Grid row = new();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            TextBlock keysBlock = new() { Text = keys, FontFamily = new FontFamily("Consolas") };
+            Grid.SetColumn(keysBlock, 0);
+            TextBlock descriptionBlock = new() { Text = description, TextWrapping = TextWrapping.Wrap };
+            Grid.SetColumn(descriptionBlock, 1);
+
+            row.Children.Add(keysBlock);
+            row.Children.Add(descriptionBlock);
+            group.Children.Add(row);
+        }
+
+        return group;
     }
 
     private async Task<bool> SaveCurrentAsync()
