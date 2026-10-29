@@ -23,6 +23,12 @@ desktop application is built with C#/.NET 10 and WinUI 3.
 - One-click, keyboard, and login-row context-menu username/password copying.
   Clipboard history and roaming are disabled, and unchanged copied content is
   cleared after the user-configured interval.
+- Auto-type: send an entry's username and/or password as keystrokes to another
+  window without using the clipboard. Finalpass either minimizes itself and
+  types into the previously used window, types into a window you pick from a
+  list, or counts down so you can switch to the right window and field yourself.
+  A configurable delay gives you time to click the right field first. It refuses to type if Finalpass is still
+  the active window, and cancels when the vault locks.
 - Keyboard commands for save, open, new vault, lock, search, and credential
   copying, plus safe `http`/`https` website launching.
 - Immediate encrypted saves for completed entry and folder actions, an explicit
@@ -44,7 +50,7 @@ if the primary vault is damaged.
 
 ## Install as a regular Windows user
 
-Download `Finalpass-0.1.4-win-x64-setup.exe` and `SHA256SUMS.txt` from the
+Download `Finalpass-0.2.0-win-x64-setup.exe` and `SHA256SUMS.txt` from the
 trusted release location, verify the checksum, and double-click the setup file.
 The installer writes only to your `%LocalAppData%\Programs\Finalpass` directory
 and current-user registry keys, so it does not request an administrator account
@@ -55,7 +61,7 @@ show an unknown-publisher warning; only continue after obtaining the file from
 the trusted project release and verifying its SHA-256 checksum. This warning is
 expected for this project's distribution model.
 
-For a portable run, extract `Finalpass-0.1.4-win-x64-portable.zip` somewhere you
+For a portable run, extract `Finalpass-0.2.0-win-x64-portable.zip` somewhere you
 can write to and run `Finalpass.exe`. Uninstalling through **Settings > Apps >
 Installed apps** removes the program but does not delete `.fpass` vaults saved
 in Documents or elsewhere.
