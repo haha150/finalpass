@@ -10,6 +10,13 @@ public sealed class AppSettings
 
     public int ClipboardClearSeconds { get; set; } = 30;
 
+    /// <summary>"PreviousWindow" minimizes Finalpass and types into the window behind it; "Delay" counts down.</summary>
+    public string AutoTypeTarget { get; set; } = "PreviousWindow";
+
+    public int AutoTypeDelaySeconds { get; set; } = 3;
+
+    public bool AutoTypePressEnter { get; set; }
+
     public string? LastVaultPath { get; set; }
 
     public int PasswordLength { get; set; } = 24;
@@ -41,6 +48,10 @@ public sealed class AppSettings
                 : "System";
         IdleLockMinutes = Math.Clamp(IdleLockMinutes, 1, 120);
         ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300);
+        AutoTypeTarget = string.Equals(AutoTypeTarget, "Delay", StringComparison.OrdinalIgnoreCase)
+            ? "Delay"
+            : "PreviousWindow";
+        AutoTypeDelaySeconds = Math.Clamp(AutoTypeDelaySeconds, 0, 30);
         if (string.IsNullOrWhiteSpace(LastVaultPath) || LastVaultPath.Length > 32_767)
         {
             LastVaultPath = null;

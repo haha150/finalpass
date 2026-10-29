@@ -735,6 +735,28 @@ public sealed partial class MainPage : Page
         }
     }
 
+    private void AutoTypeLogin_Click(object sender, RoutedEventArgs e) =>
+        StartAutoType(ViewModel.Username, ViewModel.Password, includeUsername: true);
+
+    private void AutoTypePassword_Click(object sender, RoutedEventArgs e) =>
+        StartAutoType(ViewModel.Username, ViewModel.Password, includeUsername: false);
+
+    private void AutoTypeEntryLogin_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: VaultEntry entry })
+        {
+            StartAutoType(entry.Username, entry.Password, includeUsername: true);
+        }
+    }
+
+    private void AutoTypeEntryPassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: VaultEntry entry })
+        {
+            StartAutoType(entry.Username, entry.Password, includeUsername: false);
+        }
+    }
+
     private async void OpenEntryWebsite_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: VaultEntry entry })
@@ -813,6 +835,31 @@ public sealed partial class MainPage : Page
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
             Value = _settings.ClipboardClearSeconds,
         };
+        ComboBox autoTypeTargetBox = new()
+        {
+            Header = "Auto-type target",
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = new[]
+            {
+                "Previous window (minimize Finalpass)",
+                "Wait, so I can switch windows myself",
+            },
+            SelectedIndex = string.Equals(_settings.AutoTypeTarget, "Delay", StringComparison.Ordinal) ? 1 : 0,
+        };
+        NumberBox autoTypeDelayBox = new()
+        {
+            Header = "Auto-type delay before typing (seconds)",
+            Minimum = 0,
+            Maximum = 30,
+            SmallChange = 1,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+            Value = _settings.AutoTypeDelaySeconds,
+        };
+        CheckBox autoTypeEnterBox = new()
+        {
+            Content = "Press Enter after auto-typing",
+            IsChecked = _settings.AutoTypePressEnter,
+        };
         StackPanel content = new() { Spacing = 12, MinWidth = 360 };
         content.Children.Add(themeBox);
         content.Children.Add(idleBox);
@@ -822,6 +869,9 @@ public sealed partial class MainPage : Page
             TextWrapping = TextWrapping.Wrap,
         });
         content.Children.Add(clipboardBox);
+        content.Children.Add(autoTypeTargetBox);
+        content.Children.Add(autoTypeDelayBox);
+        content.Children.Add(autoTypeEnterBox);
         content.Children.Add(new TextBlock
         {
             Text = "These preferences and the last-used vault path contain no vault data or secrets. " +
@@ -833,7 +883,7 @@ public sealed partial class MainPage : Page
             XamlRoot = XamlRoot,
             RequestedTheme = CurrentElementTheme,
             Title = "Settings",
-            Content = content,
+            Content = new ScrollViewer { Content = content },
             PrimaryButtonText = "Save",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Primary,
@@ -843,7 +893,8 @@ public sealed partial class MainPage : Page
             return;
         }
 
-        if (double.IsNaN(idleBox.Value) || double.IsNaN(clipboardBox.Value))
+        if (double.IsNaN(idleBox.Value) || double.IsNaN(clipboardBox.Value) ||
+            double.IsNaN(autoTypeDelayBox.Value))
         {
             ViewModel.StatusText = "Enter valid numeric security settings.";
             return;
@@ -858,6 +909,9 @@ public sealed partial class MainPage : Page
         ApplyTheme();
         _settings.IdleLockMinutes = checked((int)idleBox.Value);
         _settings.ClipboardClearSeconds = checked((int)clipboardBox.Value);
+        _settings.AutoTypeTarget = autoTypeTargetBox.SelectedIndex == 1 ? "Delay" : "PreviousWindow";
+        _settings.AutoTypeDelaySeconds = checked((int)autoTypeDelayBox.Value);
+        _settings.AutoTypePressEnter = autoTypeEnterBox.IsChecked == true;
         _lastActivityUtc = DateTimeOffset.UtcNow;
         if (await SaveSettingsSafelyAsync())
         {
@@ -878,11 +932,12 @@ public sealed partial class MainPage : Page
             "Entries",
             ("Ctrl+F", "Search"),
             ("Ctrl+Shift+U", "Copy username of the open entry"),
-            ("Ctrl+Shift+P", "Copy password of the open entry")));
+            ("Ctrl+Shift+P", "Copy password of the open entry"),
+            ("Ctrl+Shift+T", "Auto-type username and password of the open entry")));
         content.Children.Add(new TextBlock
         {
             Text = "Tip: right-click any login in the list to copy its username or " +
-                "password without opening it.",
+                "password without opening it, or auto-type it into another window.",
             TextWrapping = TextWrapping.Wrap,
         });
         content.Children.Add(new TextBlock
@@ -1194,6 +1249,110 @@ public sealed partial class MainPage : Page
         }
     }
 
+    private async void StartAutoType(
+        string username,
+        string password,
+        bool includeUsername,
+        nint targetWindow = 0)
+    {
+        if (string.IsNullOrEmpty(password))
+        {
+            ViewModel.StatusText = "Password is empty.";
+            return;
+        }
+
+        AutoTypeTargetKind kind = targetWindow != 0
+            ? AutoTypeTargetKind.ChosenWindow
+            : string.Equals(_settings.AutoTypeTarget, "Delay", StringComparison.Ordinal)
+                ? AutoTypeTargetKind.ManualSwitch
+                : AutoTypeTargetKind.PreviousWindow;
+        try
+        {
+            AutoTypeOutcome outcome = await AutoTyper.RunAsync(
+                includeUsername ? username : null,
+                password,
+                _settings.AutoTypePressEnter,
+                kind,
+                targetWindow,
+                TimeSpan.FromSeconds(_settings.AutoTypeDelaySeconds),
+                message =>
+                {
+                    ViewModel.StatusText = message;
+                    // The status bar is hidden while Finalpass is minimized; the taskbar title is not.
+                    App.Window.Title = message;
+                });
+            ViewModel.StatusText = outcome switch
+            {
+                AutoTypeOutcome.Typed => "Auto-typed into the active window.",
+                AutoTypeOutcome.Cancelled => "Auto-type cancelled.",
+                AutoTypeOutcome.FinalpassStillActive =>
+                    "Auto-type cancelled because Finalpass was still the active window. " +
+                    "Nothing was typed.",
+                AutoTypeOutcome.TargetGone => "Auto-type cancelled because the chosen window was closed.",
+                _ => "Windows blocked auto-type. The target window may be running as administrator.",
+            };
+        }
+        catch (InvalidOperationException exception)
+        {
+            ViewModel.StatusText = $"Auto-type error: {exception.Message}";
+        }
+        finally
+        {
+            App.Window.Title = "Finalpass";
+        }
+    }
+
+    private void AutoTypeFlyout_Opening(object? sender, object e)
+    {
+        PopulateWindowMenu(AutoTypeLoginWindowMenu, includeUsername: true, () => (ViewModel.Username, ViewModel.Password));
+        PopulateWindowMenu(AutoTypePasswordWindowMenu, includeUsername: false, () => (ViewModel.Username, ViewModel.Password));
+    }
+
+    private void EntryMenu_Opening(object? sender, object e)
+    {
+        if (sender is not MenuFlyout flyout)
+        {
+            return;
+        }
+
+        foreach (MenuFlyoutSubItem sub in flyout.Items.OfType<MenuFlyoutSubItem>())
+        {
+            if (sub.Tag is VaultEntry entry)
+            {
+                bool includeUsername =
+                    Microsoft.UI.Xaml.Automation.AutomationProperties.GetAutomationId(sub) == "login";
+                PopulateWindowMenu(sub, includeUsername, () => (entry.Username, entry.Password));
+            }
+        }
+    }
+
+    private void PopulateWindowMenu(
+        MenuFlyoutSubItem menu,
+        bool includeUsername,
+        Func<(string Username, string Password)> credentials)
+    {
+        menu.Items.Clear();
+        IReadOnlyList<OpenWindowInfo> windows = AutoTyper.GetOpenWindows();
+        if (windows.Count == 0)
+        {
+            menu.Items.Add(new MenuFlyoutItem { Text = "No other windows found", IsEnabled = false });
+            return;
+        }
+
+        foreach (OpenWindowInfo window in windows)
+        {
+            string title = window.Title.Length > 60 ? window.Title[..60] + "…" : window.Title;
+            MenuFlyoutItem item = new() { Text = $"{title} ({window.ProcessName})" };
+            nint handle = window.Handle;
+            item.Click += (_, _) =>
+            {
+                (string username, string password) = credentials();
+                StartAutoType(username, password, includeUsername, handle);
+            };
+            menu.Items.Add(item);
+        }
+    }
+
     private void ShowActionFeedback(string message, string glyph, FrameworkElement target)
     {
         ActionFeedbackTip.Target = target;
@@ -1335,6 +1494,17 @@ public sealed partial class MainPage : Page
         if (ViewModel.SelectedEntry is not null)
         {
             CopyToClipboard(ViewModel.Password, "Password");
+        }
+    }
+
+    private void AutoTypeAccelerator_Invoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        if (ViewModel.SelectedEntry is not null)
+        {
+            StartAutoType(ViewModel.Username, ViewModel.Password, includeUsername: true);
         }
     }
 
@@ -1543,6 +1713,9 @@ public sealed partial class MainPage : Page
 
     private static async Task ClearClipboardSafelyAsync()
     {
+        // Every lock, close, and vault-switch path runs through here, so a pending
+        // auto-type can never type a credential after the vault is gone.
+        AutoTyper.Cancel();
         try
         {
             await SecureClipboard.ClearIfOwnedAsync();

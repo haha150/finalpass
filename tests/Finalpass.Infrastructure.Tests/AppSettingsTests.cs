@@ -77,4 +77,29 @@ public sealed class AppSettingsTests
             }
         }
     }
+
+    [Fact]
+    public async Task AutoTypeSettingsDefaultAndAreBounded()
+    {
+        using TemporaryDirectory directory = new();
+        AppSettings defaults = await AppSettingsService.LoadAsync(
+            Path.Combine(directory.Path, "missing.json"));
+        Assert.Equal("PreviousWindow", defaults.AutoTypeTarget);
+        Assert.Equal(3, defaults.AutoTypeDelaySeconds);
+        Assert.False(defaults.AutoTypePressEnter);
+
+        string path = Path.Combine(directory.Path, "autotype.json");
+        await File.WriteAllTextAsync(
+            path,
+            "{\"autoTypeTarget\":\"elsewhere\",\"autoTypeDelaySeconds\":900,\"autoTypePressEnter\":true}");
+        AppSettings bounded = await AppSettingsService.LoadAsync(path);
+        Assert.Equal("PreviousWindow", bounded.AutoTypeTarget);
+        Assert.Equal(30, bounded.AutoTypeDelaySeconds);
+        Assert.True(bounded.AutoTypePressEnter);
+
+        await File.WriteAllTextAsync(path, "{\"autoTypeTarget\":\"delay\",\"autoTypeDelaySeconds\":0}");
+        AppSettings delayed = await AppSettingsService.LoadAsync(path);
+        Assert.Equal("Delay", delayed.AutoTypeTarget);
+        Assert.Equal(0, delayed.AutoTypeDelaySeconds);
+    }
 }

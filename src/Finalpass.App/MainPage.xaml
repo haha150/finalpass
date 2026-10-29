@@ -20,6 +20,7 @@
         <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="SearchAccelerator_Invoked" />
         <KeyboardAccelerator Key="U" Modifiers="Control,Shift" Invoked="CopyUsernameAccelerator_Invoked" />
         <KeyboardAccelerator Key="P" Modifiers="Control,Shift" Invoked="CopyPasswordAccelerator_Invoked" />
+        <KeyboardAccelerator Key="T" Modifiers="Control,Shift" Invoked="AutoTypeAccelerator_Invoked" />
     </Page.KeyboardAccelerators>
 
     <Grid>
@@ -235,17 +236,27 @@
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="Margin" Value="0,2" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         </Style>
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="vm:VaultEntryListItem">
-                            <Grid Padding="8" ColumnSpacing="10">
+                            <Grid Padding="8" ColumnSpacing="10" Background="Transparent">
                                 <Grid.ContextFlyout>
-                                    <MenuFlyout>
+                                    <MenuFlyout Opening="EntryMenu_Opening">
                                         <MenuFlyoutItem Text="Copy username" Tag="{x:Bind Entry}"
                                                         Click="CopyEntryUsername_Click" />
                                         <MenuFlyoutItem Text="Copy password" Tag="{x:Bind Entry}"
                                                         Click="CopyEntryPassword_Click" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Auto-type username and password" Tag="{x:Bind Entry}"
+                                                        Click="AutoTypeEntryLogin_Click" />
+                                        <MenuFlyoutItem Text="Auto-type password" Tag="{x:Bind Entry}"
+                                                        Click="AutoTypeEntryPassword_Click" />
+                                        <MenuFlyoutSubItem Text="Auto-type login into window" Tag="{x:Bind Entry}"
+                                                           AutomationProperties.AutomationId="login" />
+                                        <MenuFlyoutSubItem Text="Auto-type password into window" Tag="{x:Bind Entry}"
+                                                           AutomationProperties.AutomationId="password" />
                                         <MenuFlyoutSeparator />
                                         <MenuFlyoutItem Text="Open website" Tag="{x:Bind Entry}"
                                                         Click="OpenEntryWebsite_Click" />
@@ -327,7 +338,7 @@
                                 </Grid>
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <PasswordBox Header="Password" MaxLength="16384" Password="{Binding Password, Mode=TwoWay}" PasswordRevealMode="Peek"
                                                  IsEnabled="{x:Bind ViewModel.IsWritable, Mode=OneWay}" />
@@ -339,6 +350,19 @@
                                     <Button Grid.Column="2" Margin="0,22,0,0" x:Name="CopyPasswordButton" Click="CopyPassword_Click"
                                             ToolTipService.ToolTip="Copy password (Ctrl+Shift+P)" AutomationProperties.Name="Copy password">
                                         <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                                    </Button>
+                                    <Button Grid.Column="3" Margin="0,22,0,0" x:Name="AutoTypeButton"
+                                            ToolTipService.ToolTip="Auto-type into another window (Ctrl+Shift+T)"
+                                            AutomationProperties.Name="Auto-type into another window">
+                                        <FontIcon Glyph="&#xE765;" FontSize="14" />
+                                        <Button.Flyout>
+                                            <MenuFlyout Opening="AutoTypeFlyout_Opening">
+                                                <MenuFlyoutItem Text="Auto-type username and password" Click="AutoTypeLogin_Click" />
+                                                <MenuFlyoutItem Text="Auto-type password" Click="AutoTypePassword_Click" />
+                                                <MenuFlyoutSubItem x:Name="AutoTypeLoginWindowMenu" Text="Auto-type login into window" />
+                                                <MenuFlyoutSubItem x:Name="AutoTypePasswordWindowMenu" Text="Auto-type password into window" />
+                                            </MenuFlyout>
+                                        </Button.Flyout>
                                     </Button>
                                 </Grid>
                                 <Grid ColumnSpacing="8">

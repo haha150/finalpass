@@ -57,6 +57,13 @@ contents immediately after the user copies them. Excluding a password from
 history and cloud sync reduces persistence but does not make the clipboard a
 private channel.
 
+Auto-type sends keystrokes with `SendInput` to whatever window is active when it
+fires, so the user is responsible for focusing the intended field; any process
+or keylogger that observes keyboard input can see typed values. Finalpass
+refuses to type while one of its own windows is active, cancels a pending
+request when the vault locks, and cannot type into windows running at a higher
+integrity level (such as elevated applications).
+
 Finalpass v1 detects conflicting writers but does not merge concurrent edits.
 It detects corruption and tampering but does not distinguish those cases from a
 wrong master password. It does not prevent rollback to an older, otherwise valid
